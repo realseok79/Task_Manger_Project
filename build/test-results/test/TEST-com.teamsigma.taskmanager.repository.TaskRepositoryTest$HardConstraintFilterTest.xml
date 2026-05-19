@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="findAvailableTasksWithHardConstraint — Hard Constraint 필터링" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-05-19T03:50:20" hostname="bagjeong-uui-MacBookPro.local" time="0.035">
+  <properties/>
+  <testcase name="엣지 케이스: 다른 유저의 Task는 조회되지 않음" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest" time="0.014"/>
+  <testcase name="에너지 경계: MEDIUM 유저는 LOW·MEDIUM 태스크 모두 조회 가능" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest" time="0.006"/>
+  <testcase name="PENDING 외 상태(COMPLETED, SNOOZED)는 조회에서 제외" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest" time="0.005"/>
+  <testcase name="정상 케이스: 에너지·시간 조건을 모두 충족하는 Task만 반환" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest" time="0.004"/>
+  <testcase name="시간 경계: 예상 소요시간 == 가용시간인 Task는 포함" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest" time="0.003"/>
+  <testcase name="엣지 케이스: 조건에 맞는 Task가 없으면 빈 리스트 반환" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest" time="0.003"/>
+  <system-out><![CDATA[2026-05-19T12:50:20.861+09:00  INFO 16165 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest]: HardConstraintFilterTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-05-19T12:50:20.863+09:00  INFO 16165 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.teamsigma.taskmanager.TaskManagerApplication for test class com.teamsigma.taskmanager.repository.TaskRepositoryTest$HardConstraintFilterTest
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='PENDING' and t1_0.estimated_minutes<=? and case t1_0.required_energy when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end<=case ? when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end order by t1_0.deadline asc nulls last
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='PENDING' and t1_0.estimated_minutes<=? and case t1_0.required_energy when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end<=case ? when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end order by t1_0.deadline asc nulls last
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: update tasks set deadline=?,delay_count=?,description=?,estimated_minutes=?,importance=?,required_energy=?,status=?,title=?,updated_at=?,user_id=? where id=?
+Hibernate: update tasks set deadline=?,delay_count=?,description=?,estimated_minutes=?,importance=?,required_energy=?,status=?,title=?,updated_at=?,user_id=? where id=?
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='PENDING' and t1_0.estimated_minutes<=? and case t1_0.required_energy when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end<=case ? when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end order by t1_0.deadline asc nulls last
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='PENDING' and t1_0.estimated_minutes<=? and case t1_0.required_energy when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end<=case ? when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end order by t1_0.deadline asc nulls last
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='PENDING' and t1_0.estimated_minutes<=? and case t1_0.required_energy when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end<=case ? when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end order by t1_0.deadline asc nulls last
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='PENDING' and t1_0.estimated_minutes<=? and case t1_0.required_energy when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end<=case ? when 'LOW' then 0 when 'MEDIUM' then 1 when 'HIGH' then 2 end order by t1_0.deadline asc nulls last
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

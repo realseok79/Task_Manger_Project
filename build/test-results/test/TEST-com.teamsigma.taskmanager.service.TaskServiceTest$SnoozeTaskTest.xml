@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="snoozeTask" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-05-19T03:50:20" hostname="bagjeong-uui-MacBookPro.local" time="0.002">
+  <properties/>
+  <testcase name="발행 이벤트의 ActionType이 SNOOZED임" classname="com.teamsigma.taskmanager.service.TaskServiceTest$SnoozeTaskTest" time="0.0"/>
+  <testcase name="정상 케이스: 상태 SNOOZED 변경 + delayCount 1 증가 + 이벤트 발행" classname="com.teamsigma.taskmanager.service.TaskServiceTest$SnoozeTaskTest" time="0.0"/>
+  <testcase name="5회 미루기 후 isZombie() == true" classname="com.teamsigma.taskmanager.service.TaskServiceTest$SnoozeTaskTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

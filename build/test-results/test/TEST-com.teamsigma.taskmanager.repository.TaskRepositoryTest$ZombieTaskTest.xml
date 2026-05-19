@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="findZombieTasksByUserId — 좀비 태스크 감지" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-05-19T03:50:20" hostname="bagjeong-uui-MacBookPro.local" time="0.018">
+  <properties/>
+  <testcase name="경계값: delayCount == 4는 좀비 아님" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$ZombieTaskTest" time="0.008"/>
+  <testcase name="delayCount &gt;= 5 이더라도 ARCHIVED 상태는 제외" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$ZombieTaskTest" time="0.005"/>
+  <testcase name="정상 케이스: delayCount &gt;= 5 이고 PENDING인 Task만 반환" classname="com.teamsigma.taskmanager.repository.TaskRepositoryTest$ZombieTaskTest" time="0.005"/>
+  <system-out><![CDATA[2026-05-19T12:50:20.840+09:00  INFO 16165 --- [    Test worker] t.c.s.AnnotationConfigContextLoaderUtils : Could not detect default configuration classes for test class [com.teamsigma.taskmanager.repository.TaskRepositoryTest$ZombieTaskTest]: ZombieTaskTest does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+2026-05-19T12:50:20.842+09:00  INFO 16165 --- [    Test worker] .b.t.c.SpringBootTestContextBootstrapper : Found @SpringBootConfiguration com.teamsigma.taskmanager.TaskManagerApplication for test class com.teamsigma.taskmanager.repository.TaskRepositoryTest$ZombieTaskTest
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: update tasks set deadline=?,delay_count=?,description=?,estimated_minutes=?,importance=?,required_energy=?,status=?,title=?,updated_at=?,user_id=? where id=?
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='SNOOZED' and t1_0.delay_count>=5 order by t1_0.delay_count desc
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: update tasks set deadline=?,delay_count=?,description=?,estimated_minutes=?,importance=?,required_energy=?,status=?,title=?,updated_at=?,user_id=? where id=?
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='SNOOZED' and t1_0.delay_count>=5 order by t1_0.delay_count desc
+Hibernate: insert into users (email,nickname,id) values (?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: insert into tasks (created_at,deadline,delay_count,description,estimated_minutes,importance,required_energy,status,title,updated_at,user_id,id) values (?,?,?,?,?,?,?,?,?,?,?,default)
+Hibernate: update tasks set deadline=?,delay_count=?,description=?,estimated_minutes=?,importance=?,required_energy=?,status=?,title=?,updated_at=?,user_id=? where id=?
+Hibernate: select t1_0.id,t1_0.created_at,t1_0.deadline,t1_0.delay_count,t1_0.description,t1_0.estimated_minutes,t1_0.importance,t1_0.required_energy,t1_0.status,t1_0.title,t1_0.updated_at,t1_0.user_id from tasks t1_0 where t1_0.user_id=? and t1_0.status='SNOOZED' and t1_0.delay_count>=5 order by t1_0.delay_count desc
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="archiveTask / rejectArchive — 좀비 태스크 케어" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-05-19T03:50:20" hostname="bagjeong-uui-MacBookPro.local" time="0.004">
+  <properties/>
+  <testcase name="archiveTask: 상태 ARCHIVED + ARCHIVED 이벤트 발행" classname="com.teamsigma.taskmanager.service.TaskServiceTest$ArchiveTest" time="0.003"/>
+  <testcase name="rejectArchive: 상태 변경 없이 ARCHIVE_REJECTED 이벤트만 발행" classname="com.teamsigma.taskmanager.service.TaskServiceTest$ArchiveTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>
