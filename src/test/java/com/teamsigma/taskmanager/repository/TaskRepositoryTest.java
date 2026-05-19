@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import java.time.LocalDateTime;
 import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,6 +60,22 @@ class TaskRepositoryTest {
         }
     }
 
+    @Nested
+    @DisplayName("findUrgentTasksDueWithinOneHour — 긴급 마감 태스크")
+    class UrgentTaskTest {
+        @Test
+        @DisplayName("정상 케이스: 1시간 이내 마감 PENDING Task만 반환")
+        void returnsUrgentPendingTasks() {
+            saveTaskWithDeadline("긴급", LocalDateTime.now().plusMinutes(30));
+            saveTaskWithDeadline("여유", LocalDateTime.now().plusHours(3));
+            em.flush(); em.clear();
+
+            List<Task> result = taskRepository.findUrgentTasksDueWithinOneHour(user.getId());
+            assertThat(result).hasSize(1);
+            assertThat(result.get(0).getTitle()).isEqualTo("긴급");
+        }
+    }
+
     private Task saveTask(String title, int minutes, EnergyLevel energy, int importance) {
         return em.persist(Task.builder().user(user).title(title).estimatedMinutes(minutes).requiredEnergy(energy).importance(importance).build());
     }
@@ -67,5 +84,9 @@ class TaskRepositoryTest {
         Task task = em.persist(Task.builder().user(user).title("좀비 후보").estimatedMinutes(30).requiredEnergy(EnergyLevel.LOW).importance(3).build());
         for (int i = 0; i < snoozeCount; i++) task.snooze();
         return em.persist(task);
+    }
+
+    private Task saveTaskWithDeadline(String title, LocalDateTime deadline) {
+        return em.persist(Task.builder().user(user).title(title).estimatedMinutes(30).requiredEnergy(EnergyLevel.LOW).importance(3).deadline(deadline).build());
     }
 }

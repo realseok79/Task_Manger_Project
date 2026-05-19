@@ -27,6 +27,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
                       WHEN 'HIGH'   THEN 2
                   END
               )
+            ORDER BY t.deadline ASC NULLS LAST
             """)
     List<Task> findAvailableTasksWithHardConstraint(
             @Param("userId") Long userId,
@@ -44,4 +45,15 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             ORDER BY t.delayCount DESC
             """)
     List<Task> findZombieTasksByUserId(@Param("userId") Long userId);
+
+    @Query("""
+            SELECT t FROM Task t
+            WHERE t.user.id = :userId
+              AND t.status = 'PENDING'
+              AND t.deadline IS NOT NULL
+              AND t.deadline BETWEEN CURRENT_TIMESTAMP
+                                 AND (CURRENT_TIMESTAMP + 1 HOUR)
+            ORDER BY t.deadline ASC
+            """)
+    List<Task> findUrgentTasksDueWithinOneHour(@Param("userId") Long userId);
 }
