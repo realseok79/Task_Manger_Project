@@ -53,9 +53,10 @@ public class TaskService {
     }
 
     public double getCompletionRate(Long userId) {
-        List<Task> completed = taskRepository.findByUserIdAndStatus(userId, TaskStatus.COMPLETED);
-        // BUG: Integer division + count is for ALL users instead of this specific user
-        return completed.size() / taskRepository.count();
+        long total = taskRepository.countByUserId(userId);
+        if (total == 0) return 0.0;
+        long completed = taskRepository.countByUserIdAndStatus(userId, TaskStatus.COMPLETED);
+        return (double) completed / total * 100.0;
     }
 
     private Task findTaskOrThrow(Long taskId) {

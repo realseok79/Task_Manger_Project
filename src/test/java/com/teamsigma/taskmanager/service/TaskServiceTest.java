@@ -46,4 +46,14 @@ class TaskServiceTest {
             verify(eventPublisher, times(1)).publishEvent(any(TaskActionEvent.class));
         }
     }
+
+    @Test
+    @DisplayName("getCompletionRate: 정상 완료율 계산 및 반환")
+    void getCompletionRateCalculatesCorrectly() {
+        when(taskRepository.countByUserId(1L)).thenReturn(5L);
+        when(taskRepository.countByUserIdAndStatus(1L, TaskStatus.COMPLETED)).thenReturn(2L);
+
+        double rate = taskService.getCompletionRate(1L);
+        assertThat(rate).isEqualTo(40.0);
+    }
 }

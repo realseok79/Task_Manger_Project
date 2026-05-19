@@ -56,4 +56,7 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
             ORDER BY t.deadline ASC
             """)
     List<Task> findUrgentTasksDueWithinOneHour(@Param("userId") Long userId);
+
+    long countByUserId(Long userId);
+    long countByUserIdAndStatus(Long userId, TaskStatus status);
 }
