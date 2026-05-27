@@ -35,8 +35,8 @@ class ExplorationServiceTest {
         // Given
         Long userId = 1L;
         LocalDateTime now = LocalDateTime.now();
-        Task taskA = new Task(101L, "DEV", now.plusMinutes(60), 3, 0);
-        Task taskB = new Task(102L, "DOCS", now.plusMinutes(60), 3, 0);
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusMinutes(60), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusMinutes(60), 3, 0);
 
         List<TaskResponse> responses = List.of(
                 new TaskResponse(taskA, 10.0),
@@ -61,8 +61,8 @@ class ExplorationServiceTest {
         assertFalse(result.get(1).isExploration());
         // 점수와 정렬도 그대로 유지됨
         assertEquals(101L, result.get(0).getTaskId());
-        assertEquals(10.0, result.get(0).getScore());
+        assertEquals(10.0, result.get(0).getPriorityScore());
         assertEquals(102L, result.get(1).getTaskId());
-        assertEquals(5.0, result.get(1).getScore());
+        assertEquals(5.0, result.get(1).getPriorityScore());
     }
 }

@@ -4,6 +4,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -34,7 +35,8 @@ class PriorityServiceTest {
 
         ExplorationService explorationService = new ExplorationService(userActivityLogRepository);
         explorationService.setRandom(mockRandom);
-        priorityService = new PriorityService(priorityStrategy, userProfileRepository, explorationService);
+        TaskResponseMapper taskResponseMapper = new TaskResponseMapper(Clock.systemDefaultZone());
+        priorityService = new PriorityService(priorityStrategy, userProfileRepository, explorationService, taskResponseMapper);
     }
 
     @Test
@@ -50,8 +52,8 @@ class PriorityServiceTest {
         when(mockRandom.nextDouble()).thenReturn(0.03);
 
         LocalDateTime now = LocalDateTime.now();
-        Task taskA = new Task(101L, "DEV", now.plusMinutes(60), 3, 0);
-        Task taskB = new Task(102L, "DOCS", now.plusMinutes(60), 3, 0);
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusMinutes(60), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusMinutes(60), 3, 0);
 
         List<Task> tasks = List.of(taskA, taskB);
 
@@ -82,14 +84,14 @@ class PriorityServiceTest {
         TaskResponse firstResponse = result.get(0);
         assertEquals(102L, firstResponse.getTaskId());
         assertEquals("DOCS", firstResponse.getCategory());
-        assertEquals(15.0, firstResponse.getScore(), 0.0001);
+        assertEquals(15.0, firstResponse.getPriorityScore(), 0.0001);
         assertTrue(firstResponse.isExploration()); // B는 탐색 대상이므로 true
 
         // DEV 태스크는 원래 점수 10.0점 유지하며 2위로 밀려남
         TaskResponse secondResponse = result.get(1);
         assertEquals(101L, secondResponse.getTaskId());
         assertEquals("DEV", secondResponse.getCategory());
-        assertEquals(10.0, secondResponse.getScore(), 0.0001);
+        assertEquals(10.0, secondResponse.getPriorityScore(), 0.0001);
         assertFalse(secondResponse.isExploration()); // A는 탐색 모드가 미적용되어 false
     }
 
@@ -106,8 +108,8 @@ class PriorityServiceTest {
         when(mockRandom.nextDouble()).thenReturn(0.08);
 
         LocalDateTime now = LocalDateTime.now();
-        Task taskA = new Task(101L, "DEV", now.plusMinutes(60), 3, 0);
-        Task taskB = new Task(102L, "DOCS", now.plusMinutes(60), 3, 0);
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusMinutes(60), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusMinutes(60), 3, 0);
 
         List<Task> tasks = List.of(taskA, taskB);
 
@@ -124,12 +126,12 @@ class PriorityServiceTest {
         // 탐색 모드 비활성화이므로 높은 스코어순으로 정렬됨
         TaskResponse firstResponse = result.get(0);
         assertEquals(101L, firstResponse.getTaskId());
-        assertEquals(10.0, firstResponse.getScore());
+        assertEquals(10.0, firstResponse.getPriorityScore());
         assertFalse(firstResponse.isExploration());
 
         TaskResponse secondResponse = result.get(1);
         assertEquals(102L, secondResponse.getTaskId());
-        assertEquals(5.0, secondResponse.getScore());
+        assertEquals(5.0, secondResponse.getPriorityScore());
         assertFalse(secondResponse.isExploration());
     }
 
@@ -146,8 +148,8 @@ class PriorityServiceTest {
         when(mockRandom.nextDouble()).thenReturn(0.03);
 
         LocalDateTime now = LocalDateTime.now();
-        Task taskA = new Task(101L, "DEV", now.plusMinutes(60), 3, 0);
-        Task taskB = new Task(102L, "DOCS", now.plusMinutes(60), 3, 0);
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusMinutes(60), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusMinutes(60), 3, 0);
 
         List<Task> tasks = List.of(taskA, taskB);
 
@@ -164,12 +166,13 @@ class PriorityServiceTest {
         // 신규 유저이므로 탐색 모드가 미작동하고 원래의 높은 스코어순으로 정렬됨
         TaskResponse firstResponse = result.get(0);
         assertEquals(101L, firstResponse.getTaskId());
-        assertEquals(10.0, firstResponse.getScore());
+        assertEquals(10.0, firstResponse.getPriorityScore());
         assertFalse(firstResponse.isExploration());
 
         TaskResponse secondResponse = result.get(1);
         assertEquals(102L, secondResponse.getTaskId());
-        assertEquals(5.0, secondResponse.getScore());
+        assertEquals(5.0, secondResponse.getPriorityScore());
         assertFalse(secondResponse.isExploration());
     }
 }
+

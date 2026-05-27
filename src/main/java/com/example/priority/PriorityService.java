@@ -12,13 +12,16 @@ public class PriorityService {
     private final PriorityStrategy priorityStrategy;
     private final UserProfileRepository userProfileRepository;
     private final ExplorationService explorationService;
+    private final TaskResponseMapper taskResponseMapper;
 
     public PriorityService(PriorityStrategy priorityStrategy,
                            UserProfileRepository userProfileRepository,
-                           ExplorationService explorationService) {
+                           ExplorationService explorationService,
+                           TaskResponseMapper taskResponseMapper) {
         this.priorityStrategy = priorityStrategy;
         this.userProfileRepository = userProfileRepository;
         this.explorationService = explorationService;
+        this.taskResponseMapper = taskResponseMapper;
     }
 
     @Transactional(readOnly = true)
@@ -37,12 +40,12 @@ public class PriorityService {
         List<TaskResponse> responses = tasks.stream()
                 .map(task -> {
                     double score = priorityStrategy.calculate(task, profile);
-                    return new TaskResponse(task, score);
+                    return taskResponseMapper.toResponse(task, score);
                 })
                 .collect(Collectors.toList());
 
         // 2. 기본 점수 내림차순 정렬
-        responses.sort((t1, t2) -> Double.compare(t2.getScore(), t1.getScore()));
+        responses.sort((t1, t2) -> Double.compare(t2.getPriorityScore(), t1.getPriorityScore()));
 
         // 신규 유저인 경우 탐색 모드 비활성화 폴백
         if (profile.isNewUser()) {
@@ -53,3 +56,4 @@ public class PriorityService {
         return explorationService.applyExplorationMode(userId, responses);
     }
 }
+

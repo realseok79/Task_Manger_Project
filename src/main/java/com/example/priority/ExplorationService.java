@@ -78,20 +78,21 @@ public class ExplorationService {
                 if (explorationTask != null) {
                     // 리스트 최고점 찾기
                     double maxScore = tasks.stream()
-                            .mapToDouble(TaskResponse::getScore)
+                            .mapToDouble(TaskResponse::getPriorityScore)
                             .max()
                             .orElse(0.0);
 
                     // 임시 score 설정 (최고점 * 1.5, 최고점이 0일 경우 1.0 기준으로 1.5배 보장)
                     double tempScore = Math.max(maxScore, 1.0) * 1.5;
-                    explorationTask.setScore(tempScore);
+                    tempScore = Math.round(tempScore * 100.0) / 100.0;
+                    explorationTask.setPriorityScore(tempScore);
                     explorationTask.setExploration(true);
 
                     log.info("Selected task {} from category '{}' for exploration. Temporary score set to {}",
                             explorationTask.getTaskId(), targetCategory, tempScore);
 
                     // 탐색 모드 대상을 최상단에 올리기 위해 재정렬
-                    tasks.sort((t1, t2) -> Double.compare(t2.getScore(), t1.getScore()));
+                    tasks.sort((t1, t2) -> Double.compare(t2.getPriorityScore(), t1.getPriorityScore()));
                 }
             }
         } else {
