@@ -23,6 +23,9 @@ public class PriorityService {
 
     @Transactional(readOnly = true)
     public List<TaskResponse> getPrioritizedTasks(Long userId, List<Task> tasks) {
+        if (userId == null) {
+            throw new IllegalArgumentException("User ID must not be null");
+        }
         if (tasks == null || tasks.isEmpty()) {
             return List.of();
         }
@@ -40,6 +43,11 @@ public class PriorityService {
 
         // 2. 기본 점수 내림차순 정렬
         responses.sort((t1, t2) -> Double.compare(t2.getScore(), t1.getScore()));
+
+        // 신규 유저인 경우 탐색 모드 비활성화 폴백
+        if (profile.isNewUser()) {
+            return responses;
+        }
 
         // 3. 엔트로피 탐색 모드 적용
         return explorationService.applyExplorationMode(userId, responses);

@@ -42,6 +42,14 @@ public class ExplorationService {
             List<UserActivityLog> completedLogs = userActivityLogRepository
                     .findByUserIdAndTimestampAfterAndActivityType(userId, thirtyDaysAgo, "COMPLETED");
 
+            if (completedLogs.isEmpty()) {
+                log.info("No completed logs in the last 30 days for user {}. Aborting exploration mode.", userId);
+                for (TaskResponse task : tasks) {
+                    task.setExploration(false);
+                }
+                return tasks;
+            }
+
             // 카테고리별 COMPLETED 카운트 집계
             Map<String, Long> categoryCounts = completedLogs.stream()
                     .collect(Collectors.groupingBy(UserActivityLog::getCategory, Collectors.counting()));

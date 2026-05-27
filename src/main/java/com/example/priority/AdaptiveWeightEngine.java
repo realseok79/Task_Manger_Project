@@ -2,6 +2,7 @@ package com.example.priority;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.lang.NonNull;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,13 @@ public class AdaptiveWeightEngine {
     public void learnAndAdjustWeights() {
         log.info("Starting AdaptiveWeightEngine scheduler...");
 
+        // 7일 경과 신규 유저 벌크 전환
+        LocalDateTime threshold = LocalDateTime.now().minusDays(7);
+        int transitionedCount = userProfileRepository.bulkTransitionNewUsers(threshold);
+        if (transitionedCount > 0) {
+            log.info("Transitioned {} users from newUser=true to false", transitionedCount);
+        }
+
         LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusDays(1);
         List<UserActivityLog> logs = activityLogRepository.findByTimestampAfter(twentyFourHoursAgo);
 
@@ -43,6 +51,18 @@ public class AdaptiveWeightEngine {
 
         for (Map.Entry<Long, List<UserActivityLog>> entry : logsByUser.entrySet()) {
             Long userId = entry.getKey();
+            if (userId == null) {
+                continue;
+            }
+
+            boolean isNew = userProfileRepository.findById(userId)
+                    .map(UserProfile::isNewUser)
+                    .orElse(false);
+            if (isNew) {
+                log.info("User {} is a new user. Skipping weight adjustment.", userId);
+                continue;
+            }
+
             List<UserActivityLog> userLogs = entry.getValue();
 
             // 편식 패턴 판정
@@ -86,7 +106,7 @@ public class AdaptiveWeightEngine {
         log.info("AdaptiveWeightEngine scheduler execution finished.");
     }
 
-    private void adjustUserProfileWeights(Long userId, double snoozedRate) {
+    private void adjustUserProfileWeights(@NonNull Long userId, double snoozedRate) {
         userProfileRepository.findById(userId).ifPresent(profile -> {
             double w1 = profile.getW1();
             double w2 = profile.getW2();

@@ -11,6 +11,8 @@ import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 @SpringBootTest
 @Transactional
@@ -37,6 +39,7 @@ class AdaptiveWeightEngineTest {
         // Given
         Long userId = 1L;
         UserProfile profile = new UserProfile(userId, 0.40, 0.30, 0.30);
+        profile.setNewUser(false);
         userProfileRepository.save(profile);
 
         LocalDateTime now = LocalDateTime.now();
@@ -78,6 +81,7 @@ class AdaptiveWeightEngineTest {
         // Given
         Long userId = 2L;
         UserProfile profile = new UserProfile(userId, 0.40, 0.30, 0.30);
+        profile.setNewUser(false);
         userProfileRepository.save(profile);
 
         LocalDateTime now = LocalDateTime.now();
@@ -102,5 +106,70 @@ class AdaptiveWeightEngineTest {
         assertEquals(0.40, updatedProfile.getW1(), 0.0001);
         assertEquals(0.30, updatedProfile.getW2(), 0.0001);
         assertEquals(0.30, updatedProfile.getW3(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("가입 3일차 신규 유저 테스트 - 가중치 변경 없음 및 newUser=true 유지")
+    void learnAndAdjustWeights_NewUser_3Days() {
+        // Given
+        Long userId = 3L;
+        UserProfile profile = new UserProfile(userId, 0.40, 0.30, 0.30);
+        profile.setNewUser(true);
+        profile.setCreatedAt(LocalDateTime.now().minusDays(3));
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        // 편식 패턴을 만족하도록 로그 구성
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 20, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 2, 15, now.minusHours(4)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 30, now.minusHours(6)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 2, 10, now.minusHours(8)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 4, 60, now.minusHours(1)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 5, 120, now.minusHours(3)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 90, now.minusHours(5)));
+
+        // When
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        // Then
+        UserProfile updatedProfile = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updatedProfile);
+        assertTrue(updatedProfile.isNewUser());
+        assertEquals(0.40, updatedProfile.getW1(), 0.0001);
+        assertEquals(0.30, updatedProfile.getW2(), 0.0001);
+        assertEquals(0.30, updatedProfile.getW3(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("가입 8일차 신규 유저 테스트 - newUser=false로 전환 및 가중치 정상 업데이트")
+    void learnAndAdjustWeights_NewUser_8Days() {
+        // Given
+        Long userId = 4L;
+        UserProfile profile = new UserProfile(userId, 0.40, 0.30, 0.30);
+        profile.setNewUser(true);
+        profile.setCreatedAt(LocalDateTime.now().minusDays(8));
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        // 편식 패턴을 만족하도록 로그 구성
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 20, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 2, 15, now.minusHours(4)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 30, now.minusHours(6)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 2, 10, now.minusHours(8)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 4, 60, now.minusHours(1)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 5, 120, now.minusHours(3)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 90, now.minusHours(5)));
+
+        // When
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        // Then
+        UserProfile updatedProfile = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updatedProfile);
+        assertFalse(updatedProfile.isNewUser());
+        // 가중치가 업데이트되었어야 함 (Picky Pattern과 동일)
+        assertEquals(0.4933, updatedProfile.getW1(), 0.001);
+        assertEquals(0.2533, updatedProfile.getW2(), 0.001);
+        assertEquals(0.2533, updatedProfile.getW3(), 0.001);
     }
 }

@@ -43,6 +43,7 @@ class PriorityServiceTest {
         // Given
         Long userId = 1L;
         UserProfile profile = new UserProfile(userId, 1.0, 1.0, 1.0);
+        profile.setNewUser(false); // 일반 유저로 세팅
         when(userProfileRepository.findById(userId)).thenReturn(Optional.of(profile));
 
         // Random nextDouble < 0.05 로 설정하여 탐색 모드 활성화 강제
@@ -98,6 +99,7 @@ class PriorityServiceTest {
         // Given
         Long userId = 1L;
         UserProfile profile = new UserProfile(userId, 1.0, 1.0, 1.0);
+        profile.setNewUser(false); // 일반 유저로 세팅
         when(userProfileRepository.findById(userId)).thenReturn(Optional.of(profile));
 
         // Random nextDouble >= 0.05 로 설정하여 탐색 모드 비활성화
@@ -120,6 +122,46 @@ class PriorityServiceTest {
         assertEquals(2, result.size());
 
         // 탐색 모드 비활성화이므로 높은 스코어순으로 정렬됨
+        TaskResponse firstResponse = result.get(0);
+        assertEquals(101L, firstResponse.getTaskId());
+        assertEquals(10.0, firstResponse.getScore());
+        assertFalse(firstResponse.isExploration());
+
+        TaskResponse secondResponse = result.get(1);
+        assertEquals(102L, secondResponse.getTaskId());
+        assertEquals(5.0, secondResponse.getScore());
+        assertFalse(secondResponse.isExploration());
+    }
+
+    @Test
+    @DisplayName("신규 유저 폴백(Fallback) 모드 동작 확인 - newUser=true일 때 탐색 모드를 건너뛰고 원래 점수 순으로 정렬하며 모든 작업의 isExploration 플래그는 false이다")
+    void getPrioritizedTasks_NewUserFallback() {
+        // Given
+        Long userId = 1L;
+        UserProfile profile = new UserProfile(userId, 1.0, 1.0, 1.0);
+        profile.setNewUser(true); // 신규 유저로 세팅
+        when(userProfileRepository.findById(userId)).thenReturn(Optional.of(profile));
+
+        // 5% 미만 확률이라도 신규 유저는 탐색을 건너뛰어야 함
+        when(mockRandom.nextDouble()).thenReturn(0.03);
+
+        LocalDateTime now = LocalDateTime.now();
+        Task taskA = new Task(101L, "DEV", now.plusMinutes(60), 3, 0);
+        Task taskB = new Task(102L, "DOCS", now.plusMinutes(60), 3, 0);
+
+        List<Task> tasks = List.of(taskA, taskB);
+
+        // 기본 우선순위 스코어 세팅 (A가 10.0점, B가 5.0점)
+        when(priorityStrategy.calculate(taskA, profile)).thenReturn(10.0);
+        when(priorityStrategy.calculate(taskB, profile)).thenReturn(5.0);
+
+        // When
+        List<TaskResponse> result = priorityService.getPrioritizedTasks(userId, tasks);
+
+        // Then
+        assertEquals(2, result.size());
+
+        // 신규 유저이므로 탐색 모드가 미작동하고 원래의 높은 스코어순으로 정렬됨
         TaskResponse firstResponse = result.get(0);
         assertEquals(101L, firstResponse.getTaskId());
         assertEquals(10.0, firstResponse.getScore());
