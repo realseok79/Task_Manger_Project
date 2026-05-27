@@ -1,8 +1,10 @@
 package com.example.priority;
 
+import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 
+@Component
 public class DefaultDynamicPriorityStrategy implements PriorityStrategy {
 
     private static final double K = 10.0;

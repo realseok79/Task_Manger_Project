@@ -18,7 +18,7 @@ class DefaultDynamicPriorityStrategyTest {
         // ChronoUnit.MINUTES.between(LocalDateTime.now(), task.getDueDate()) 계산 시
         // 계산 시점의 미세한 시간차로 인해 59분이 반환되는 것을 방지하기 위해 5초의 여유를 추가합니다.
         LocalDateTime dueDate = LocalDateTime.now().plusMinutes(60).plusSeconds(5);
-        Task task = new Task(dueDate, 3, 2); // starRating=3, delayCount=2
+        Task task = new Task(1L, "DEV", dueDate, 3, 2); // id=1L, category="DEV", starRating=3, delayCount=2
         UserProfile profile = new UserProfile(1L, 2.0, 100.0, 1.5); // W1=2.0, W2=100.0, W3=1.5
 
         // Expected Score Calculation:
@@ -42,7 +42,7 @@ class DefaultDynamicPriorityStrategyTest {
         // Given
         // 마감이 지난 상태(dt = -30분)
         LocalDateTime dueDate = LocalDateTime.now().minusMinutes(30);
-        Task task = new Task(dueDate, 3, 2); // starRating=3, delayCount=2
+        Task task = new Task(1L, "DEV", dueDate, 3, 2); // id=1L, category="DEV", starRating=3, delayCount=2
         UserProfile profile = new UserProfile(1L, 2.0, 100.0, 1.5); // W1=2.0, W2=100.0, W3=1.5
 
         // Expected Score Calculation:
@@ -65,7 +65,7 @@ class DefaultDynamicPriorityStrategyTest {
         // Given
         LocalDateTime dueDate = LocalDateTime.now().plusMinutes(60).plusSeconds(5);
         // 지연 횟수가 매우 높아 공식 상 음수가 나오는 태스크 생성
-        Task task = new Task(dueDate, 1, 50); // starRating=1, delayCount=50
+        Task task = new Task(1L, "DEV", dueDate, 1, 50); // id=1L, category="DEV", starRating=1, delayCount=50
         UserProfile profile = new UserProfile(1L, 1.0, 10.0, 2.0); // W1=1.0, W2=10.0, W3=2.0
 
         // Expected Score Calculation:

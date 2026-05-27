@@ -8,4 +8,5 @@ import java.util.List;
 @Repository
 public interface UserActivityLogRepository extends JpaRepository<UserActivityLog, Long> {
     List<UserActivityLog> findByTimestampAfter(LocalDateTime timestamp);
+    List<UserActivityLog> findByUserIdAndTimestampAfterAndActivityType(Long userId, LocalDateTime timestamp, String activityType);
 }

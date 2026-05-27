@@ -17,6 +17,7 @@ public class UserActivityLog {
 
     private Long userId;
     private String activityType; // "COMPLETED", "SNOOZED"
+    private String category;
     private int starRating;
     private int estimatedTime; // 예상 소요 시간 (분)
     private LocalDateTime timestamp;
@@ -24,12 +25,18 @@ public class UserActivityLog {
     public UserActivityLog() {
     }
 
-    public UserActivityLog(Long userId, String activityType, int starRating, int estimatedTime, LocalDateTime timestamp) {
+    public UserActivityLog(Long userId, String activityType, String category, int starRating, int estimatedTime, LocalDateTime timestamp) {
         this.userId = userId;
         this.activityType = activityType;
+        this.category = category;
         this.starRating = starRating;
         this.estimatedTime = estimatedTime;
         this.timestamp = timestamp;
+    }
+
+    // 기존 테스트 코드 호환을 위한 5개 파라미터 생성자 오버로딩
+    public UserActivityLog(Long userId, String activityType, int starRating, int estimatedTime, LocalDateTime timestamp) {
+        this(userId, activityType, "DEFAULT", starRating, estimatedTime, timestamp);
     }
 
     public Long getId() {
@@ -42,6 +49,10 @@ public class UserActivityLog {
 
     public String getActivityType() {
         return activityType;
+    }
+
+    public String getCategory() {
+        return category;
     }
 
     public int getStarRating() {
