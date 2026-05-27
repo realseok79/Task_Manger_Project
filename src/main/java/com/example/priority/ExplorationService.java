@@ -17,14 +17,10 @@ public class ExplorationService {
     private static final Logger log = LoggerFactory.getLogger(ExplorationService.class);
 
     private final UserActivityLogRepository userActivityLogRepository;
-    private Random random = new Random();
+    private final Random random;
 
-    public ExplorationService(UserActivityLogRepository userActivityLogRepository) {
+    public ExplorationService(UserActivityLogRepository userActivityLogRepository, Random random) {
         this.userActivityLogRepository = userActivityLogRepository;
-    }
-
-    // 테스트에서 mock Random을 주입받기 위한 setter
-    void setRandom(Random random) {
         this.random = random;
     }
 

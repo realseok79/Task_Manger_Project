@@ -25,8 +25,7 @@ class ExplorationServiceTest {
     void setUp() {
         userActivityLogRepository = mock(UserActivityLogRepository.class);
         mockRandom = mock(Random.class);
-        explorationService = new ExplorationService(userActivityLogRepository);
-        explorationService.setRandom(mockRandom);
+        explorationService = new ExplorationService(userActivityLogRepository, mockRandom);
     }
 
     @Test
