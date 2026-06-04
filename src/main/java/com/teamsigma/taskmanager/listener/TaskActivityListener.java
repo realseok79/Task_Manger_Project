@@ -16,7 +16,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class TaskActivityListener {
     private final UserActivityLogRepository activityLogRepository;
 
-    @Async
+    // 전용 풀(activityLogExecutor)에서 실행: 로그 적재가 메인 응답 스레드를 점유하지 않게 격리한다.
+    @Async("activityLogExecutor")
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleTaskAction(TaskActionEvent event) {
         try {
