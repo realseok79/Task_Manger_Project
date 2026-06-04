@@ -1,0 +1,19 @@
+# 테스트 전용 설정. test 클래스패스가 main 보다 우선하므로 main/application.yml 을 덮어쓴다.
+# 핵심 목적: 테스트에서 dev 프로파일(=시더)이 절대 켜지지 않도록 active=test 로 고정.
+spring:
+  profiles:
+    active: test
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    open-in-view: false
+
+app:
+  seed:
+    enabled: false               # 테스트에서는 시더 비활성 (테스트가 직접 데이터를 구성)

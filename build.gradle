@@ -26,10 +26,15 @@ repositories {
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    // Bean Validation: DTO 제약(@NotNull, @Min 등)을 컨트롤러 진입 시점에서 강제하기 위해 추가
+    implementation 'org.springframework.boot:spring-boot-starter-validation'
+    // springdoc: 코드(어노테이션) 기반으로 OpenAPI 스펙 + Swagger UI를 자동 생성 (프론트 연동 문서화용)
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     runtimeOnly 'com.mysql:mysql-connector-j'
-    testRuntimeOnly 'com.h2database:h2'
+    // H2를 runtimeOnly로 승격: 운영(MySQL)과 별개로 dev 프로파일에서 인메모리 DB로 즉시 구동 가능하도록
+    runtimeOnly 'com.h2database:h2'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testCompileOnly 'org.projectlombok:lombok'
     testAnnotationProcessor 'org.projectlombok:lombok'
