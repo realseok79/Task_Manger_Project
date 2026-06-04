@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="completeTask" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-05-19T03:50:20" hostname="bagjeong-uui-MacBookPro.local" time="0.003">
-  <properties/>
-  <testcase name="발행 이벤트의 ActionType이 COMPLETED임" classname="com.teamsigma.taskmanager.service.TaskServiceTest$CompleteTaskTest" time="0.001"/>
-  <testcase name="엣지 케이스: 존재하지 않는 taskId면 IllegalArgumentException 발생" classname="com.teamsigma.taskmanager.service.TaskServiceTest$CompleteTaskTest" time="0.001"/>
-  <testcase name="정상 케이스: Task 상태가 COMPLETED로 변경되고 이벤트 발행" classname="com.teamsigma.taskmanager.service.TaskServiceTest$CompleteTaskTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

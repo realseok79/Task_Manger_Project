@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="조회 메서드" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-05-19T03:50:20" hostname="bagjeong-uui-MacBookPro.local" time="0.031">
-  <properties/>
-  <testcase name="getZombieTasks: Repository 좀비 쿼리에 userId 위임" classname="com.teamsigma.taskmanager.service.TaskServiceTest$QueryTest" time="0.03"/>
-  <testcase name="getAvailableTasks: Repository Hard Constraint 쿼리에 파라미터 위임" classname="com.teamsigma.taskmanager.service.TaskServiceTest$QueryTest" time="0.001"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>
