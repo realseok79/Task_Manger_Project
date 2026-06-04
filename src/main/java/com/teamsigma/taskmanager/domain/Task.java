@@ -49,9 +49,12 @@ public class Task {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "category", nullable = false, length = 100)
+    private String category;
+
     @Builder
     private Task(User user, String title, String description, int estimatedMinutes,
-                 LocalDateTime deadline, EnergyLevel requiredEnergy, int importance) {
+                 LocalDateTime deadline, EnergyLevel requiredEnergy, int importance, String category) {
         this.user = user;
         this.title = title;
         this.description = description;
@@ -61,6 +64,7 @@ public class Task {
         this.importance = importance;
         this.status = TaskStatus.PENDING;
         this.delayCount = 0;
+        this.category = category != null ? category : "DEFAULT";
     }
 
     public void complete() {

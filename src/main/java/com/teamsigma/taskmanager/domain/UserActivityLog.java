@@ -37,13 +37,15 @@ public class UserActivityLog {
     private int taskEstimatedMinutes;
     @Column(name = "task_delay_count", nullable = false)
     private int taskDelayCount;
+    @Column(name = "category", nullable = false, length = 100)
+    private String category;
     @CreationTimestamp
     @Column(name = "logged_at", nullable = false, updatable = false)
     private LocalDateTime loggedAt;
 
     @Builder
     private UserActivityLog(Long userId, Long taskId, ActionType actionType, EnergyLevel contextEnergy,
-                            int contextAvailableMinutes, int taskImportance, int taskEstimatedMinutes, int taskDelayCount) {
+                            int contextAvailableMinutes, int taskImportance, int taskEstimatedMinutes, int taskDelayCount, String category) {
         this.userId = userId;
         this.taskId = taskId;
         this.actionType = actionType;
@@ -52,6 +54,24 @@ public class UserActivityLog {
         this.taskImportance = taskImportance;
         this.taskEstimatedMinutes = taskEstimatedMinutes;
         this.taskDelayCount = taskDelayCount;
+        this.category = category != null ? category : "DEFAULT";
+    }
+
+    public UserActivityLog(Long userId, String activityType, String category, int starRating, int estimatedTime, LocalDateTime timestamp) {
+        this.userId = userId;
+        this.taskId = 0L;
+        this.actionType = ActionType.valueOf(activityType);
+        this.contextEnergy = EnergyLevel.LOW;
+        this.contextAvailableMinutes = 0;
+        this.taskImportance = starRating;
+        this.taskEstimatedMinutes = estimatedTime;
+        this.taskDelayCount = 0;
+        this.loggedAt = timestamp;
+        this.category = category != null ? category : "DEFAULT";
+    }
+
+    public UserActivityLog(Long userId, String activityType, int starRating, int estimatedTime, LocalDateTime timestamp) {
+        this(userId, activityType, "DEFAULT", starRating, estimatedTime, timestamp);
     }
 
     public static UserActivityLog snapshot(Task task, ActionType actionType, EnergyLevel currentEnergy, int currentAvailableMinutes) {
@@ -64,6 +84,23 @@ public class UserActivityLog {
                 .taskImportance(task.getImportance())
                 .taskEstimatedMinutes(task.getEstimatedMinutes())
                 .taskDelayCount(task.getDelayCount())
+                .category(task.getCategory())
                 .build();
+    }
+
+    public String getActivityType() {
+        return actionType != null ? actionType.name() : null;
+    }
+
+    public int getStarRating() {
+        return taskImportance;
+    }
+
+    public int getEstimatedTime() {
+        return taskEstimatedMinutes;
+    }
+
+    public LocalDateTime getTimestamp() {
+        return loggedAt;
     }
 }
