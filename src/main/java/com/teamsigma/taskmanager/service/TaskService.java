@@ -1,8 +1,13 @@
 package com.teamsigma.taskmanager.service;
 
 import com.teamsigma.taskmanager.domain.*;
+import com.teamsigma.taskmanager.dto.TaskCreateRequest;
+import com.teamsigma.taskmanager.dto.TaskStatusUpdateRequest;
 import com.teamsigma.taskmanager.event.TaskActionEvent;
+import com.teamsigma.taskmanager.exception.TaskNotFoundException;
 import com.teamsigma.taskmanager.repository.TaskRepository;
+import com.teamsigma.taskmanager.repository.UserActivityLogRepository;
+import com.teamsigma.taskmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -13,7 +18,42 @@ import java.util.List;
 @RequiredArgsConstructor
 public class TaskService {
     private final TaskRepository taskRepository;
+    private final UserRepository userRepository;
+    private final UserActivityLogRepository activityLogRepository;
     private final ApplicationEventPublisher eventPublisher;
+
+    /**
+     * Task 생성. 소유 유저를 영속 상태로 로딩한 뒤 연관관계를 맺는다.
+     * 존재하지 않는 userId면 400(IllegalArgumentException)으로 처리되도록 한다.
+     */
+    @Transactional
+    public Task createTask(TaskCreateRequest request) {
+        User user = userRepository.findById(request.userId())
+                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 User입니다. userId=" + request.userId()));
+        Task task = Task.builder()
+                .user(user)
+                .title(request.title())
+                .description(request.description())
+                .estimatedMinutes(request.estimatedMinutes())
+                .deadline(request.deadline())
+                .requiredEnergy(request.requiredEnergy())
+                .importance(request.importance())
+                .build();
+        return taskRepository.save(task);
+    }
+
+    /**
+     * API 액션(COMPLETE/SNOOZE/ARCHIVE)을 도메인 행동으로 라우팅.
+     * 컨트롤러에 분기 로직이 흩어지지 않도록 단일 진입점으로 모은다.
+     */
+    @Transactional
+    public void changeStatus(Long taskId, TaskStatusUpdateRequest request) {
+        switch (request.action()) {
+            case COMPLETE -> completeTask(taskId, request.energyLevel(), request.availableMinutes());
+            case SNOOZE   -> snoozeTask(taskId, request.energyLevel(), request.availableMinutes());
+            case ARCHIVE  -> archiveTask(taskId, request.energyLevel(), request.availableMinutes());
+        }
+    }
 
     @Transactional
     public void completeTask(Long taskId, EnergyLevel currentEnergy, int currentAvailableMinutes) {
@@ -52,6 +92,12 @@ public class TaskService {
         return taskRepository.findZombieTasksByUserId(userId);
     }
 
+    /** 엔진 파트 연동용: 유저 행동 로그를 최신순으로 조회. */
+    @Transactional(readOnly = true)
+    public List<UserActivityLog> getUserActivityLogs(Long userId) {
+        return activityLogRepository.findByUserIdOrderByLoggedAtDesc(userId);
+    }
+
     public double getCompletionRate(Long userId) {
         long total = taskRepository.countByUserId(userId);
         if (total == 0) return 0.0;
@@ -60,8 +106,9 @@ public class TaskService {
     }
 
     private Task findTaskOrThrow(Long taskId) {
+        // 없는 리소스는 404로 매핑되어야 하므로 IllegalArgumentException(400)이 아닌 전용 예외를 던진다.
         return taskRepository.findById(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 Task입니다. taskId=" + taskId));
+                .orElseThrow(() -> new TaskNotFoundException(taskId));
     }
 
     private void publishEvent(Task task, ActionType actionType, EnergyLevel currentEnergy, int currentAvailableMinutes) {
