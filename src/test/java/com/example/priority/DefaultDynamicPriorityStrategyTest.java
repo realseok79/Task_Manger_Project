@@ -98,4 +98,16 @@ class DefaultDynamicPriorityStrategyTest {
         assertThat(neglected).isGreaterThan(fresh);
         assertThat(neglected).isCloseTo(0.5, within(0.0001));
     }
+
+    @Test
+    @DisplayName("explain은 점수를 요소별 기여분(중요도/긴급도/지연)으로 분해한다")
+    void explainBreaksDownScore() {
+        // importance=0.5*0.6=0.3, urgency=0.3*(120/180)=0.2, delayPenalty=0.2*(2/5)=0.08, total=0.42
+        ScoreBreakdown b = strategy.explain(task(3, NOW.plusMinutes(60), 2), new UserProfile(1L, 0.5, 0.3, 0.2));
+
+        assertThat(b.importance()).isCloseTo(0.3, within(0.0001));
+        assertThat(b.urgency()).isCloseTo(0.2, within(0.0001));
+        assertThat(b.delayPenalty()).isCloseTo(0.08, within(0.0001));
+        assertThat(b.total()).isCloseTo(0.42, within(0.0001));
+    }
 }

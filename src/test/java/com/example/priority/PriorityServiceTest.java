@@ -9,6 +9,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -172,6 +173,32 @@ class PriorityServiceTest {
         assertEquals(102L, secondResponse.getTaskId());
         assertEquals(5.0, secondResponse.getPriorityScore());
         assertFalse(secondResponse.isExploration());
+    }
+
+    @Test
+    @DisplayName("사용자가 고정(pin)한 작업은 점수와 무관하게 최상단으로 온다")
+    void getPrioritizedTasks_Pinned() {
+        Long userId = 1L;
+        UserProfile profile = new UserProfile(userId, 1.0, 1.0, 1.0);
+        profile.setNewUser(false);
+        when(userProfileRepository.findById(userId)).thenReturn(Optional.of(profile));
+        when(mockRandom.nextDouble()).thenReturn(0.08); // 탐색 비활성화
+
+        LocalDateTime now = LocalDateTime.now();
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusDays(10), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusDays(10), 3, 0);
+        when(priorityStrategy.calculate(taskA, profile)).thenReturn(10.0);
+        when(priorityStrategy.calculate(taskB, profile)).thenReturn(5.0);
+
+        // 점수가 더 낮은 B(102)를 고정
+        List<TaskResponse> result = priorityService.getPrioritizedTasks(userId, List.of(taskA, taskB), Set.of(102L));
+
+        assertEquals(2, result.size());
+        // 점수는 A>B지만 B가 고정되어 최상단에 온다
+        assertEquals(102L, result.get(0).getTaskId());
+        assertTrue(result.get(0).isPinned());
+        assertEquals(101L, result.get(1).getTaskId());
+        assertFalse(result.get(1).isPinned());
     }
 }
 

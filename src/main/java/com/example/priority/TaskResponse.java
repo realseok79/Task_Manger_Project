@@ -33,6 +33,14 @@ public class TaskResponse {
     /** 이 작업이 왜 이 순위/긴급도인지 사람이 읽을 수 있는 사유(설명가능성). */
     private String reason;
 
+    @JsonProperty("isPinned")
+    private boolean isPinned;
+
+    // 점수 요소분해(설명가능성): 각 요소의 가중 기여분. 미산출 시 null.
+    private Double importanceScore;
+    private Double urgencyScore;
+    private Double delayPenalty;
+
     public TaskResponse(Long taskId, String title, String category, double priorityScore, boolean isExploration, String urgencyLevel, boolean isZombie, String reason) {
         this.taskId = taskId;
         this.title = title;
@@ -104,6 +112,35 @@ public class TaskResponse {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    @JsonProperty("isPinned")
+    public boolean isPinned() {
+        return isPinned;
+    }
+
+    @JsonProperty("isPinned")
+    public void setPinned(boolean pinned) {
+        isPinned = pinned;
+    }
+
+    public Double getImportanceScore() {
+        return importanceScore;
+    }
+
+    public Double getUrgencyScore() {
+        return urgencyScore;
+    }
+
+    public Double getDelayPenalty() {
+        return delayPenalty;
+    }
+
+    /** 점수 요소분해(중요도/긴급도 기여, 지연 페널티)를 설정한다. */
+    public void setBreakdown(double importanceScore, double urgencyScore, double delayPenalty) {
+        this.importanceScore = importanceScore;
+        this.urgencyScore = urgencyScore;
+        this.delayPenalty = delayPenalty;
     }
 
     @JsonProperty("isZombie")
