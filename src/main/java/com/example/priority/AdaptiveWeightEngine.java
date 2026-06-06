@@ -18,6 +18,21 @@ public class AdaptiveWeightEngine {
 
     private static final Logger log = LoggerFactory.getLogger(AdaptiveWeightEngine.class);
 
+    // 가중치 기본값/한도 (항목6 설정화의 사전작업으로 named constant화)
+    static final double DEFAULT_W1 = 0.5;
+    static final double W1_CAP = 0.90;
+    /** MASTER 패턴에서 W1을 기본값 쪽으로 끌어당기는 비율(자기보정 강도). */
+    static final double RECOVERY_RATE = 0.30;
+    /** 쉬운·저중요 작업 완료율이 이 값을 넘으면 편식 조건A 성립. */
+    static final double EASY_COMPLETION_THRESHOLD = 0.70;
+    /** 고중요 작업 SNOOZED 비율이 이 값을 넘으면 편식 조건B 성립. */
+    static final double HIGH_IMPORTANCE_SNOOZE_THRESHOLD = 0.50;
+    /** 고중요 작업 완료율이 이 값을 넘으면 '잘 처리하는' 마스터로 본다. */
+    static final double MASTER_COMPLETION_THRESHOLD = 0.70;
+
+    /** 학습이 감지하는 사용자 행동 유형. */
+    enum Archetype { IMPORTANCE_AVOIDER, IMPORTANCE_MASTER, NEUTRAL }
+
     private final UserActivityLogRepository activityLogRepository;
     private final UserProfileRepository userProfileRepository;
     private final Clock clock;
@@ -68,83 +83,122 @@ public class AdaptiveWeightEngine {
 
             List<UserActivityLog> userLogs = entry.getValue();
 
-            // 편식 패턴 판정
-            // 조건A: 예상 소요 30분 이하 + 중요도 낮은(starRating <= 2) 작업 완료율 > 70%
+            // 쉬운·저중요(소요 30분 이하 & starRating <= 2) 작업 완료율 → 조건A
             List<UserActivityLog> lowEffortLogs = userLogs.stream()
                     .filter(l -> l.getEstimatedTime() <= 30 && l.getStarRating() <= 2)
                     .toList();
+            boolean conditionA = !lowEffortLogs.isEmpty()
+                    && rateOf(lowEffortLogs, "COMPLETED") > EASY_COMPLETION_THRESHOLD;
 
-            boolean conditionA = false;
-            if (!lowEffortLogs.isEmpty()) {
-                long completedCount = lowEffortLogs.stream()
-                        .filter(l -> "COMPLETED".equals(l.getActivityType()))
-                        .count();
-                double completionRate = (double) completedCount / lowEffortLogs.size();
-                conditionA = completionRate > 0.70;
-            }
-
-            // 조건B: 중요도 높은(starRating >= 4) 작업의 SNOOZED 비율 > 50%
+            // 고중요(starRating >= 4) 작업의 SNOOZED/COMPLETED 비율
             List<UserActivityLog> highImportanceLogs = userLogs.stream()
                     .filter(l -> l.getStarRating() >= 4)
                     .toList();
+            double snoozedRate = rateOf(highImportanceLogs, "SNOOZED");
+            double completionRate = rateOf(highImportanceLogs, "COMPLETED");
+            boolean conditionB = !highImportanceLogs.isEmpty()
+                    && snoozedRate > HIGH_IMPORTANCE_SNOOZE_THRESHOLD;
 
-            boolean conditionB = false;
-            double snoozedRate = 0.0;
-            if (!highImportanceLogs.isEmpty()) {
-                long snoozedCount = highImportanceLogs.stream()
-                        .filter(l -> "SNOOZED".equals(l.getActivityType()))
-                        .count();
-                snoozedRate = (double) snoozedCount / highImportanceLogs.size();
-                conditionB = snoozedRate > 0.50;
-            }
-
-            // 조건A AND 조건B 동시 충족 시 편식 패턴 판정
-            if (conditionA && conditionB) {
-                log.info("Picky pattern detected for user: {}", userId);
-                adjustUserProfileWeights(userId, snoozedRate);
-            } else {
-                log.info("User {} has a normal activity pattern.", userId);
+            Archetype archetype = classify(conditionA, conditionB, highImportanceLogs.isEmpty(), completionRate);
+            switch (archetype) {
+                case IMPORTANCE_AVOIDER -> {
+                    log.info("Importance-avoider (picky) pattern detected for user: {}", userId);
+                    boostImportance(userId, snoozedRate);
+                }
+                case IMPORTANCE_MASTER -> {
+                    log.info("Importance-master pattern detected for user: {}", userId);
+                    recoverImportanceTowardDefault(userId);
+                }
+                case NEUTRAL -> log.info("User {} has a normal activity pattern.", userId);
             }
         }
         log.info("AdaptiveWeightEngine scheduler execution finished.");
     }
 
-    private void adjustUserProfileWeights(@NonNull Long userId, double snoozedRate) {
+    /**
+     * 행동 유형 분류.
+     * <ul>
+     *   <li>AVOIDER: 쉬운 건 완료(A) + 중요한 건 미룸(B) → 중요도 가중치 부족 신호</li>
+     *   <li>MASTER: 중요 작업을 높은 비율로 완료 → 중요도 boost가 더는 불필요</li>
+     *   <li>NEUTRAL: 뚜렷한 신호 없음 → 변경하지 않음(기존 "정상=불변" 계약)</li>
+     * </ul>
+     */
+    private Archetype classify(boolean conditionA, boolean conditionB,
+                               boolean highImportanceEmpty, double highStarCompletionRate) {
+        if (conditionA && conditionB) {
+            return Archetype.IMPORTANCE_AVOIDER;
+        }
+        if (!highImportanceEmpty && highStarCompletionRate > MASTER_COMPLETION_THRESHOLD) {
+            return Archetype.IMPORTANCE_MASTER;
+        }
+        return Archetype.NEUTRAL;
+    }
+
+    private static double rateOf(List<UserActivityLog> logs, String activityType) {
+        if (logs.isEmpty()) {
+            return 0.0;
+        }
+        long count = logs.stream().filter(l -> activityType.equals(l.getActivityType())).count();
+        return (double) count / logs.size();
+    }
+
+    /** IMPORTANCE_AVOIDER: 중요 작업을 피하는 유저 → W1을 SNOOZED 비율에 비례해 상향(↑). */
+    private void boostImportance(@NonNull Long userId, double snoozedRate) {
         userProfileRepository.findById(userId).ifPresent(profile -> {
             double w1 = profile.getW1();
             double w2 = profile.getW2();
             double w3 = profile.getW3();
 
-            // boostRate는 SNOOZED 비율(0.50 ~ 1.00)에 비례하여 0.20 ~ 0.30 범위에서 계산
-            // 선형 매핑 공식: 0.20 + (snoozedRate - 0.50) * (0.30 - 0.20) / (1.00 - 0.50)
+            // boostRate: SNOOZED 비율(0.50~1.00)에 선형 비례하여 0.20~0.30
             double boostRate = 0.20 + (snoozedRate - 0.50) * 0.20;
-            boostRate = Math.max(0.20, Math.min(0.30, boostRate)); // 범위 안전장치
+            boostRate = Math.max(0.20, Math.min(0.30, boostRate));
 
-            // 편식 패턴 감지 시: W1 = W1 * (1 + boostRate)
-            double newW1 = w1 * (1 + boostRate);
-            
-            // W1 상한선 설정 (W2, W3에 최소한의 가중치를 할당하여 합이 1.0이 되도록 보장)
-            newW1 = Math.min(newW1, 0.90);
+            double newW1 = Math.min(w1 * (1 + boostRate), W1_CAP);
+            double[] redistributed = splitRemaining(1.0 - newW1, w2, w3);
+            saveWeights(profile, newW1, redistributed[0], redistributed[1]);
 
-            double remainingWeight = 1.0 - newW1;
-            double newW2;
-            double newW3;
-
-            if (w2 + w3 > 0.0) {
-                newW2 = remainingWeight * (w2 / (w2 + w3));
-                newW3 = remainingWeight * (w3 / (w2 + w3));
-            } else {
-                // 기존 W2, W3의 비율이 없는 경우 균등하게 나눔
-                newW2 = remainingWeight / 2.0;
-                newW3 = remainingWeight / 2.0;
-            }
-
-            profile.updateWeights(newW1, newW2, newW3);
-            userProfileRepository.save(profile);
-
-            log.info("Adjusted weights for user {}: W1={}(+{}%), W2={}, W3={}",
-                    userId, String.format("%.4f", newW1), String.format("%.2f", boostRate * 100),
-                    String.format("%.4f", newW2), String.format("%.4f", newW3));
+            log.info("Boosted W1 for user {} (avoider): W1={} (+{}%)",
+                    userId, fmt(newW1), String.format("%.2f", boostRate * 100));
         });
+    }
+
+    /**
+     * IMPORTANCE_MASTER: 중요 작업을 잘 처리하는 유저 → 과거 boost가 낡았으면 W1을 기본값 쪽으로 회복(↓).
+     * 한 방향(증가)만 하던 기존 학습에 양방향(감소) 자기보정을 추가한다. W1이 기본값 이하면 변경 없음.
+     */
+    private void recoverImportanceTowardDefault(@NonNull Long userId) {
+        userProfileRepository.findById(userId).ifPresent(profile -> {
+            double w1 = profile.getW1();
+            if (w1 <= DEFAULT_W1) {
+                log.info("User {} is a master but W1({}) already at/below default. No change.", userId, fmt(w1));
+                return;
+            }
+            double w2 = profile.getW2();
+            double w3 = profile.getW3();
+
+            double newW1 = w1 + (DEFAULT_W1 - w1) * RECOVERY_RATE; // 기본값 쪽으로 당김
+            double[] redistributed = splitRemaining(1.0 - newW1, w2, w3);
+            saveWeights(profile, newW1, redistributed[0], redistributed[1]);
+
+            log.info("Recovered W1 toward default for user {} (master): W1 {} -> {}",
+                    userId, fmt(w1), fmt(newW1));
+        });
+    }
+
+    /** 남은 가중치(remaining)를 기존 W2:W3 비율로 나눈다(비율이 없으면 균등). 합은 항상 1.0 유지. */
+    private static double[] splitRemaining(double remaining, double w2, double w3) {
+        if (w2 + w3 > 0.0) {
+            return new double[]{ remaining * (w2 / (w2 + w3)), remaining * (w3 / (w2 + w3)) };
+        }
+        return new double[]{ remaining / 2.0, remaining / 2.0 };
+    }
+
+    private void saveWeights(UserProfile profile, double w1, double w2, double w3) {
+        profile.updateWeights(w1, w2, w3);
+        userProfileRepository.save(profile);
+    }
+
+    private static String fmt(double d) {
+        return String.format("%.4f", d);
     }
 }

@@ -172,4 +172,83 @@ class AdaptiveWeightEngineTest {
         assertEquals(0.2533, updatedProfile.getW2(), 0.001);
         assertEquals(0.2533, updatedProfile.getW3(), 0.001);
     }
+
+    @Test
+    @DisplayName("마스터 패턴 - 중요작업 완료율이 높으면 부풀려진 W1을 기본값 쪽으로 낮춘다(양방향)")
+    void learnAndAdjustWeights_MasterPattern_DecreasesW1() {
+        // Given: 과거 boost로 W1이 0.70까지 부풀려진 유저
+        Long userId = 5L;
+        UserProfile profile = new UserProfile(userId, 0.70, 0.18, 0.12);
+        profile.setNewUser(false);
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        // 고중요(>=4) 완료율 4/5 = 80% (> 70%), SNOOZED 20% → master(편식 아님)
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 5, 90, now.minusHours(1)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 5, 60, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 45, now.minusHours(3)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 30, now.minusHours(4)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 5, 120, now.minusHours(5)));
+
+        // When
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        // Then: newW1 = 0.70 + (0.5 - 0.70)*0.30 = 0.64 (감소)
+        UserProfile updated = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updated);
+        assertEquals(0.64, updated.getW1(), 0.001);
+        assertTrue(updated.getW1() < 0.70); // 양방향: W1이 내려간다
+        // remaining 0.36을 0.18:0.12 = 0.6:0.4 비율로 → W2=0.216, W3=0.144
+        assertEquals(0.216, updated.getW2(), 0.001);
+        assertEquals(0.144, updated.getW3(), 0.001);
+        assertEquals(1.0, updated.getW1() + updated.getW2() + updated.getW3(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("마스터 패턴이지만 W1이 이미 기본값(0.5) 이하이면 변경하지 않는다")
+    void learnAndAdjustWeights_MasterPattern_AtDefault_NoChange() {
+        Long userId = 6L;
+        UserProfile profile = new UserProfile(userId, 0.50, 0.30, 0.20);
+        profile.setNewUser(false);
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 5, 90, now.minusHours(1)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 60, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 30, now.minusHours(3)));
+
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        UserProfile updated = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updated);
+        assertEquals(0.50, updated.getW1(), 0.0001);
+        assertEquals(0.30, updated.getW2(), 0.0001);
+        assertEquals(0.20, updated.getW3(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("편식 패턴 극단값 - W1은 상한(0.90)을 넘지 않고 합은 1.0을 유지한다")
+    void learnAndAdjustWeights_Avoider_W1CapAndSum() {
+        Long userId = 7L;
+        UserProfile profile = new UserProfile(userId, 0.85, 0.10, 0.05);
+        profile.setNewUser(false);
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        // 조건A: 쉬운·저중요 완료율 100%
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 20, now.minusHours(1)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 20, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 2, 30, now.minusHours(3)));
+        // 조건B: 고중요 SNOOZED 100% (snoozedRate=1.0 → boostRate=0.30)
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 5, 120, now.minusHours(4)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 4, 90, now.minusHours(5)));
+
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        // 0.85 * 1.30 = 1.105 → 상한 0.90으로 클램프
+        UserProfile updated = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updated);
+        assertEquals(0.90, updated.getW1(), 0.0001);
+        assertEquals(1.0, updated.getW1() + updated.getW2() + updated.getW3(), 0.0001);
+    }
 }
