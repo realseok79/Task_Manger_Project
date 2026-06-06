@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Component
@@ -73,11 +74,13 @@ public class AdaptiveWeightEngine {
                 continue;
             }
 
-            boolean isNew = userProfileRepository.findById(userId)
-                    .map(UserProfile::isNewUser)
-                    .orElse(false);
-            if (isNew) {
+            Optional<UserProfile> profileOpt = userProfileRepository.findById(userId);
+            if (profileOpt.map(UserProfile::isNewUser).orElse(false)) {
                 log.info("User {} is a new user. Skipping weight adjustment.", userId);
+                continue;
+            }
+            if (profileOpt.map(UserProfile::isWeightsLocked).orElse(false)) {
+                log.info("User {} has locked weights. Skipping weight adjustment.", userId);
                 continue;
             }
 
@@ -200,5 +203,27 @@ public class AdaptiveWeightEngine {
 
     private static String fmt(double d) {
         return String.format("%.4f", d);
+    }
+
+    // ── 거버넌스: 사용자 통제(리셋/락) ───────────────────────────────
+
+    /** 가중치를 기본값(0.5/0.3/0.2)으로 되돌린다. 자동 학습 드리프트를 사용자가 취소. */
+    @Transactional
+    public void resetWeights(Long userId) {
+        userProfileRepository.findById(userId).ifPresent(profile -> {
+            profile.resetToDefaultWeights();
+            userProfileRepository.save(profile);
+            log.info("Reset weights to default for user {}", userId);
+        });
+    }
+
+    /** 가중치 자동 학습을 잠그거나 푼다. 잠그면 학습 스케줄러가 해당 유저를 건너뛴다. */
+    @Transactional
+    public void setWeightsLocked(Long userId, boolean locked) {
+        userProfileRepository.findById(userId).ifPresent(profile -> {
+            profile.setWeightsLocked(locked);
+            userProfileRepository.save(profile);
+            log.info("Set weightsLocked={} for user {}", locked, userId);
+        });
     }
 }

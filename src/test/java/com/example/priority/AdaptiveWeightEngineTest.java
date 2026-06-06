@@ -251,4 +251,48 @@ class AdaptiveWeightEngineTest {
         assertEquals(0.90, updated.getW1(), 0.0001);
         assertEquals(1.0, updated.getW1() + updated.getW2() + updated.getW3(), 0.0001);
     }
+
+    @Test
+    @DisplayName("가중치가 잠겨 있으면(weightsLocked) 편식 패턴이어도 학습이 가중치를 바꾸지 않는다")
+    void learnAndAdjustWeights_LockedWeights_NoChange() {
+        Long userId = 8L;
+        UserProfile profile = new UserProfile(userId, 0.40, 0.30, 0.30);
+        profile.setNewUser(false);
+        profile.setWeightsLocked(true); // 잠금
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        // 잠금이 아니었다면 W1이 올라갔을 편식 패턴 로그
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 20, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 2, 15, now.minusHours(4)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 30, now.minusHours(6)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 4, 60, now.minusHours(1)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 5, 120, now.minusHours(3)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 90, now.minusHours(5)));
+
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        UserProfile updated = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updated);
+        assertEquals(0.40, updated.getW1(), 0.0001);
+        assertEquals(0.30, updated.getW2(), 0.0001);
+        assertEquals(0.30, updated.getW3(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("resetWeights는 가중치를 기본값(0.5/0.3/0.2)으로 되돌린다")
+    void resetWeights_RestoresDefault() {
+        Long userId = 9L;
+        UserProfile profile = new UserProfile(userId, 0.90, 0.06, 0.04);
+        profile.setNewUser(false);
+        userProfileRepository.save(profile);
+
+        adaptiveWeightEngine.resetWeights(userId);
+
+        UserProfile updated = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updated);
+        assertEquals(0.50, updated.getW1(), 0.0001);
+        assertEquals(0.30, updated.getW2(), 0.0001);
+        assertEquals(0.20, updated.getW3(), 0.0001);
+    }
 }

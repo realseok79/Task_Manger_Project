@@ -20,6 +20,9 @@ public class UserProfile {
     private boolean newUser = true;
     private LocalDateTime createdAt;
 
+    /** true면 자동 학습(AdaptiveWeightEngine)이 가중치를 건드리지 않는다(사용자 고정). */
+    private boolean weightsLocked = false;
+
     public UserProfile() {
     }
 
@@ -73,6 +76,19 @@ public class UserProfile {
         this.w1 = w1;
         this.w2 = w2;
         this.w3 = w3;
+    }
+
+    public boolean isWeightsLocked() {
+        return weightsLocked;
+    }
+
+    public void setWeightsLocked(boolean weightsLocked) {
+        this.weightsLocked = weightsLocked;
+    }
+
+    /** 가중치를 기본값(0.5/0.3/0.2)으로 되돌린다(드리프트 리셋). */
+    public void resetToDefaultWeights() {
+        updateWeights(0.5, 0.3, 0.2);
     }
 }
 
