@@ -29,7 +29,7 @@ public class TaskResponseMapper {
 
         String reason = buildReason(task);
 
-        return new TaskResponse(
+        TaskResponse response = new TaskResponse(
                 task.getId(),
                 task.getTitle(),
                 task.getCategory(),
@@ -39,9 +39,28 @@ public class TaskResponseMapper {
                 isZombie,
                 reason
         );
+        response.setStuckLevel(stuckLevel(task.getDelayCount()));
+        return response;
     }
 
-    /** 이 작업이 왜 이 순위/긴급도인지 사람이 읽을 사유를 조합한다(마감 → 연기 → 중요도 순). */
+    /**
+     * 정체 등급(비수치심): 미룸 횟수를 비난조가 아닌 중립적 단계로 표현해, 이진 isZombie를 보완한다.
+     * 페널티 자체는 strategy에서 상한이 걸려 무한히 누적 처벌하지 않는다(과처벌 방지).
+     */
+    static String stuckLevel(int delayCount) {
+        if (delayCount >= 8) {
+            return "STALLED";
+        }
+        if (delayCount >= 5) {
+            return "STUCK";
+        }
+        if (delayCount >= 3) {
+            return "AGING";
+        }
+        return "NONE";
+    }
+
+    /** 이 작업이 왜 이 순위/긴급도인지 사람이 읽을 사유를 조합한다(마감 → 정체 → 중요도 순). */
     private String buildReason(Task task) {
         StringBuilder sb = new StringBuilder();
 
@@ -57,8 +76,9 @@ public class TaskResponseMapper {
             }
         }
 
+        // 비수치심 프레이밍: "연기"(비난조) 대신 "묵은 일(N회 보류)"로 중립적으로 표현
         if (task.getDelayCount() >= 5) {
-            sb.append(" · ").append(task.getDelayCount()).append("회 연기");
+            sb.append(" · 묵은 일(").append(task.getDelayCount()).append("회 보류)");
         }
         if (task.getStarRating() >= 4) {
             sb.append(" · 중요도 높음");

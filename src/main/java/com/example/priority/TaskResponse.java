@@ -41,6 +41,9 @@ public class TaskResponse {
     private Double urgencyScore;
     private Double delayPenalty;
 
+    /** 정체 등급(비수치심): NONE / AGING / STUCK / STALLED. 이진 isZombie를 보완. */
+    private String stuckLevel;
+
     public TaskResponse(Long taskId, String title, String category, double priorityScore, boolean isExploration, String urgencyLevel, boolean isZombie, String reason) {
         this.taskId = taskId;
         this.title = title;
@@ -141,6 +144,14 @@ public class TaskResponse {
         this.importanceScore = importanceScore;
         this.urgencyScore = urgencyScore;
         this.delayPenalty = delayPenalty;
+    }
+
+    public String getStuckLevel() {
+        return stuckLevel;
+    }
+
+    public void setStuckLevel(String stuckLevel) {
+        this.stuckLevel = stuckLevel;
     }
 
     @JsonProperty("isZombie")

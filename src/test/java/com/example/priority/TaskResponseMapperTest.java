@@ -104,9 +104,9 @@ class TaskResponseMapperTest {
         Task important = new Task(1L, "T", "DEV", baseTime.plusMinutes(30), 5, 0);
         assertEquals("마감까지 30분 · 중요도 높음", mapper.toResponse(important, 1.0).getReason());
 
-        // 마감 10분 경과 + 6회 연기 → "마감 10분 지남 · 6회 연기"
+        // 마감 10분 경과 + 6회 보류 → 비수치심 표현 "마감 10분 지남 · 묵은 일(6회 보류)"
         Task overdueZombie = new Task(2L, "T", "DEV", baseTime.minusMinutes(10), 3, 6);
-        assertEquals("마감 10분 지남 · 6회 연기", mapper.toResponse(overdueZombie, 1.0).getReason());
+        assertEquals("마감 10분 지남 · 묵은 일(6회 보류)", mapper.toResponse(overdueZombie, 1.0).getReason());
 
         // 마감 없음 → "마감 없음"
         Task noDeadline = new Task(3L, "T", "DEV", null, 3, 0);
@@ -123,5 +123,14 @@ class TaskResponseMapperTest {
         // 방치 5 → aging 0.5 >= 0.33 → STALE
         Task neglected = new Task(2L, "T", "DEV", null, 3, 5);
         assertEquals("STALE", mapper.toResponse(neglected, 1.0).getUrgencyLevel());
+    }
+
+    @Test
+    @DisplayName("stuckLevel은 미룸 횟수에 따라 NONE→AGING→STUCK→STALLED로 등급화된다")
+    void toResponse_StuckLevel() {
+        assertEquals("NONE", mapper.toResponse(new Task(1L, "T", "DEV", baseTime.plusDays(1), 3, 2), 1.0).getStuckLevel());
+        assertEquals("AGING", mapper.toResponse(new Task(2L, "T", "DEV", baseTime.plusDays(1), 3, 3), 1.0).getStuckLevel());
+        assertEquals("STUCK", mapper.toResponse(new Task(3L, "T", "DEV", baseTime.plusDays(1), 3, 5), 1.0).getStuckLevel());
+        assertEquals("STALLED", mapper.toResponse(new Task(4L, "T", "DEV", baseTime.plusDays(1), 3, 8), 1.0).getStuckLevel());
     }
 }
