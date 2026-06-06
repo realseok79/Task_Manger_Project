@@ -30,7 +30,10 @@ public class TaskResponse {
     @JsonProperty("isZombie")
     private boolean isZombie;
 
-    public TaskResponse(Long taskId, String title, String category, double priorityScore, boolean isExploration, String urgencyLevel, boolean isZombie) {
+    /** 이 작업이 왜 이 순위/긴급도인지 사람이 읽을 수 있는 사유(설명가능성). */
+    private String reason;
+
+    public TaskResponse(Long taskId, String title, String category, double priorityScore, boolean isExploration, String urgencyLevel, boolean isZombie, String reason) {
         this.taskId = taskId;
         this.title = title;
         this.category = category;
@@ -38,6 +41,7 @@ public class TaskResponse {
         this.isExploration = isExploration;
         this.urgencyLevel = urgencyLevel;
         this.isZombie = isZombie;
+        this.reason = reason;
     }
 
     // 하위 호환성 및 테스트용 생성자
@@ -49,6 +53,7 @@ public class TaskResponse {
         this.isExploration = false;
         this.urgencyLevel = "GREEN";
         this.isZombie = task.getDelayCount() >= 5;
+        this.reason = null;
     }
 
     public Long getTaskId() {
@@ -91,6 +96,14 @@ public class TaskResponse {
 
     public void setUrgencyLevel(String urgencyLevel) {
         this.urgencyLevel = urgencyLevel;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public void setReason(String reason) {
+        this.reason = reason;
     }
 
     @JsonProperty("isZombie")

@@ -96,4 +96,20 @@ class TaskResponseMapperTest {
         assertEquals(87.43, mapper.toResponse(task, 87.434).getPriorityScore());
         assertEquals(87.40, mapper.toResponse(task, 87.4).getPriorityScore());
     }
+
+    @Test
+    @DisplayName("reason은 마감·연기·중요도를 조합해 사람이 읽을 수 있게 만든다")
+    void toResponse_Reason() {
+        // 마감 30분 후 + 중요도 5(>=4) → "마감까지 30분 · 중요도 높음"
+        Task important = new Task(1L, "T", "DEV", baseTime.plusMinutes(30), 5, 0);
+        assertEquals("마감까지 30분 · 중요도 높음", mapper.toResponse(important, 1.0).getReason());
+
+        // 마감 10분 경과 + 6회 연기 → "마감 10분 지남 · 6회 연기"
+        Task overdueZombie = new Task(2L, "T", "DEV", baseTime.minusMinutes(10), 3, 6);
+        assertEquals("마감 10분 지남 · 6회 연기", mapper.toResponse(overdueZombie, 1.0).getReason());
+
+        // 마감 없음 → "마감 없음"
+        Task noDeadline = new Task(3L, "T", "DEV", null, 3, 0);
+        assertEquals("마감 없음", mapper.toResponse(noDeadline, 1.0).getReason());
+    }
 }

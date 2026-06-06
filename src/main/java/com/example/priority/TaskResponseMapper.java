@@ -2,6 +2,8 @@ package com.example.priority;
 
 import org.springframework.stereotype.Component;
 
+import java.util.OptionalLong;
+
 @Component
 public class TaskResponseMapper {
 
@@ -25,6 +27,8 @@ public class TaskResponseMapper {
         // priorityScore 소수점 2자리 반올림
         double roundedScore = Math.round(score * 100.0) / 100.0;
 
+        String reason = buildReason(task);
+
         return new TaskResponse(
                 task.getId(),
                 task.getTitle(),
@@ -32,7 +36,33 @@ public class TaskResponseMapper {
                 roundedScore,
                 false, // isExploration 기본값 false (이후 ExplorationService에서 변경 가능)
                 urgencyLevel,
-                isZombie
+                isZombie,
+                reason
         );
+    }
+
+    /** 이 작업이 왜 이 순위/긴급도인지 사람이 읽을 사유를 조합한다(마감 → 연기 → 중요도 순). */
+    private String buildReason(Task task) {
+        StringBuilder sb = new StringBuilder();
+
+        OptionalLong minutes = urgencyEvaluator.minutesUntilDeadline(task.getDueDate());
+        if (minutes.isEmpty()) {
+            sb.append("마감 없음");
+        } else {
+            long m = minutes.getAsLong();
+            if (m < 0) {
+                sb.append("마감 ").append(-m).append("분 지남");
+            } else {
+                sb.append("마감까지 ").append(m).append("분");
+            }
+        }
+
+        if (task.getDelayCount() >= 5) {
+            sb.append(" · ").append(task.getDelayCount()).append("회 연기");
+        }
+        if (task.getStarRating() >= 4) {
+            sb.append(" · 중요도 높음");
+        }
+        return sb.toString();
     }
 }
