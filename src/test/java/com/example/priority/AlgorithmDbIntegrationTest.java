@@ -147,16 +147,16 @@ class AlgorithmDbIntegrationTest {
         // 10개 작업 생성 (DEV 9개, DOCS 1개)
         // DEV 작업들의 우선순위 점수를 높게 설정하기 위해 starRating을 높게 설정하고, DOCS 작업은 낮게 설정
         List<Task> tasks = List.of(
-                new Task(101L, "DEV Task 1", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(102L, "DEV Task 2", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(103L, "DEV Task 3", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(104L, "DEV Task 4", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(105L, "DEV Task 5", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(106L, "DEV Task 6", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(107L, "DEV Task 7", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(108L, "DEV Task 8", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(109L, "DEV Task 9", "DEV", now.plusMinutes(60), 5, 0),
-                new Task(110L, "DOCS Task 1", "DOCS", now.plusMinutes(60), 1, 0) // 탐색 모드 타겟
+                new Task(101L, "DEV Task 1", "DEV", now.plusDays(10), 5, 0),
+                new Task(102L, "DEV Task 2", "DEV", now.plusDays(10), 5, 0),
+                new Task(103L, "DEV Task 3", "DEV", now.plusDays(10), 5, 0),
+                new Task(104L, "DEV Task 4", "DEV", now.plusDays(10), 5, 0),
+                new Task(105L, "DEV Task 5", "DEV", now.plusDays(10), 5, 0),
+                new Task(106L, "DEV Task 6", "DEV", now.plusDays(10), 5, 0),
+                new Task(107L, "DEV Task 7", "DEV", now.plusDays(10), 5, 0),
+                new Task(108L, "DEV Task 8", "DEV", now.plusDays(10), 5, 0),
+                new Task(109L, "DEV Task 9", "DEV", now.plusDays(10), 5, 0),
+                new Task(110L, "DOCS Task 1", "DOCS", now.plusDays(10), 1, 0) // 탐색 모드 타겟
         );
 
         // 탐색 모드 활성화 강제 (0.01 < 0.05)

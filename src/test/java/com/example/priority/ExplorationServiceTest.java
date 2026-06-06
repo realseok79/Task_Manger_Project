@@ -14,10 +14,13 @@ import java.util.Random;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class ExplorationServiceTest {
@@ -95,5 +98,50 @@ class ExplorationServiceTest {
         verify(userActivityLogRepository).findByUserIdAndTimestampAfterAndActivityType(
                 eq(userId), since.capture(), eq("COMPLETED"));
         assertEquals(NOW.minusDays(30), since.getValue());
+    }
+
+    @Test
+    @DisplayName("긴급(RED) 작업이 있으면 5% 확률을 통과해도 탐색을 건너뛴다 (바운드)")
+    void applyExplorationMode_UrgentPresent_Skipped() {
+        Long userId = 1L;
+        when(mockRandom.nextDouble()).thenReturn(0.01); // 활성화 확률 통과
+
+        List<TaskResponse> responses = new ArrayList<>(List.of(
+                new TaskResponse(101L, "급한 일", "DEV", 9.0, false, "RED", false, null),
+                new TaskResponse(102L, "탐색 후보", "DOCS", 1.0, false, "GREEN", false, null)
+        ));
+
+        List<TaskResponse> result = explorationService.applyExplorationMode(userId, responses);
+
+        // RED 작업이 있으므로 탐색 미발동: 누구도 탐색 대상이 아니다
+        assertFalse(result.get(0).isExploration());
+        assertFalse(result.get(1).isExploration());
+        // 로그 조회조차 하지 않고 조기 차단한다
+        verifyNoInteractions(userActivityLogRepository);
+    }
+
+    @Test
+    @DisplayName("탐색 활성화 시 선택된 작업에 추천 사유(reason)가 채워진다")
+    void applyExplorationMode_SetsReasonOnPick() {
+        Long userId = 1L;
+        when(mockRandom.nextDouble()).thenReturn(0.01);
+        // DEV만 완료 이력 → DOCS가 최소 완료 카테고리
+        when(userActivityLogRepository.findByUserIdAndTimestampAfterAndActivityType(
+                eq(userId), any(LocalDateTime.class), eq("COMPLETED"))
+        ).thenReturn(List.of(new UserActivityLog(userId, "COMPLETED", "DEV", 3, 30, NOW.minusDays(3))));
+
+        // 비긴급(GREEN) 후보 (convenience 생성자는 urgencyLevel=GREEN)
+        List<TaskResponse> responses = new ArrayList<>(List.of(
+                new TaskResponse(new Task(101L, "A", "DEV", NOW.plusDays(10), 3, 0), 10.0),
+                new TaskResponse(new Task(102L, "B", "DOCS", NOW.plusDays(10), 3, 0), 5.0)
+        ));
+
+        List<TaskResponse> result = explorationService.applyExplorationMode(userId, responses);
+
+        // DOCS(102)가 최상단 + 사유 채워짐
+        assertEquals(102L, result.get(0).getTaskId());
+        assertTrue(result.get(0).isExploration());
+        assertNotNull(result.get(0).getReason());
+        assertTrue(result.get(0).getReason().contains("DOCS"));
     }
 }

@@ -51,8 +51,8 @@ class PriorityServiceTest {
         when(mockRandom.nextDouble()).thenReturn(0.03);
 
         LocalDateTime now = LocalDateTime.now();
-        Task taskA = new Task(101L, "Task A", "DEV", now.plusMinutes(60), 3, 0);
-        Task taskB = new Task(102L, "Task B", "DOCS", now.plusMinutes(60), 3, 0);
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusDays(10), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusDays(10), 3, 0);
 
         List<Task> tasks = List.of(taskA, taskB);
 
@@ -107,8 +107,8 @@ class PriorityServiceTest {
         when(mockRandom.nextDouble()).thenReturn(0.08);
 
         LocalDateTime now = LocalDateTime.now();
-        Task taskA = new Task(101L, "Task A", "DEV", now.plusMinutes(60), 3, 0);
-        Task taskB = new Task(102L, "Task B", "DOCS", now.plusMinutes(60), 3, 0);
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusDays(10), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusDays(10), 3, 0);
 
         List<Task> tasks = List.of(taskA, taskB);
 
@@ -147,8 +147,8 @@ class PriorityServiceTest {
         when(mockRandom.nextDouble()).thenReturn(0.03);
 
         LocalDateTime now = LocalDateTime.now();
-        Task taskA = new Task(101L, "Task A", "DEV", now.plusMinutes(60), 3, 0);
-        Task taskB = new Task(102L, "Task B", "DOCS", now.plusMinutes(60), 3, 0);
+        Task taskA = new Task(101L, "Task A", "DEV", now.plusDays(10), 3, 0);
+        Task taskB = new Task(102L, "Task B", "DOCS", now.plusDays(10), 3, 0);
 
         List<Task> tasks = List.of(taskA, taskB);
 
