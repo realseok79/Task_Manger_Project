@@ -19,18 +19,6 @@ public class AdaptiveWeightEngine {
 
     private static final Logger log = LoggerFactory.getLogger(AdaptiveWeightEngine.class);
 
-    // 가중치 기본값/한도 (항목6 설정화의 사전작업으로 named constant화)
-    static final double DEFAULT_W1 = 0.5;
-    static final double W1_CAP = 0.90;
-    /** MASTER 패턴에서 W1을 기본값 쪽으로 끌어당기는 비율(자기보정 강도). */
-    static final double RECOVERY_RATE = 0.30;
-    /** 쉬운·저중요 작업 완료율이 이 값을 넘으면 편식 조건A 성립. */
-    static final double EASY_COMPLETION_THRESHOLD = 0.70;
-    /** 고중요 작업 SNOOZED 비율이 이 값을 넘으면 편식 조건B 성립. */
-    static final double HIGH_IMPORTANCE_SNOOZE_THRESHOLD = 0.50;
-    /** 고중요 작업 완료율이 이 값을 넘으면 '잘 처리하는' 마스터로 본다. */
-    static final double MASTER_COMPLETION_THRESHOLD = 0.70;
-
     // 감사 로그 변경 사유 코드
     static final String REASON_AVOIDER_BOOST = "AVOIDER_BOOST";
     static final String REASON_MASTER_RECOVER = "MASTER_RECOVER";
@@ -44,14 +32,30 @@ public class AdaptiveWeightEngine {
     private final WeightChangeLogRepository weightChangeLogRepository;
     private final Clock clock;
 
+    // 튜닝 파라미터(EngineProperties로 외부화). 기본값은 EngineProperties.Learning에 정의.
+    private final double defaultW1;
+    private final double w1Cap;
+    private final double recoveryRate;
+    private final double easyCompletionThreshold;
+    private final double highImportanceSnoozeThreshold;
+    private final double masterCompletionThreshold;
+
     public AdaptiveWeightEngine(UserActivityLogRepository activityLogRepository,
                                 UserProfileRepository userProfileRepository,
                                 WeightChangeLogRepository weightChangeLogRepository,
+                                EngineProperties properties,
                                 Clock clock) {
         this.activityLogRepository = activityLogRepository;
         this.userProfileRepository = userProfileRepository;
         this.weightChangeLogRepository = weightChangeLogRepository;
         this.clock = clock;
+        EngineProperties.Learning learning = properties.getLearning();
+        this.defaultW1 = learning.getDefaultW1();
+        this.w1Cap = learning.getW1Cap();
+        this.recoveryRate = learning.getRecoveryRate();
+        this.easyCompletionThreshold = learning.getEasyCompletionThreshold();
+        this.highImportanceSnoozeThreshold = learning.getHighImportanceSnoozeThreshold();
+        this.masterCompletionThreshold = learning.getMasterCompletionThreshold();
     }
 
     @Scheduled(cron = "0 0 0 * * ?") // 매일 자정 자동 실행
@@ -74,7 +78,6 @@ public class AdaptiveWeightEngine {
             return;
         }
 
-        // 유저별로 로그 분류
         Map<Long, List<UserActivityLog>> logsByUser = logs.stream()
                 .collect(Collectors.groupingBy(UserActivityLog::getUserId));
 
@@ -101,7 +104,7 @@ public class AdaptiveWeightEngine {
                     .filter(l -> l.getEstimatedTime() <= 30 && l.getStarRating() <= 2)
                     .toList();
             boolean conditionA = !lowEffortLogs.isEmpty()
-                    && rateOf(lowEffortLogs, "COMPLETED") > EASY_COMPLETION_THRESHOLD;
+                    && rateOf(lowEffortLogs, "COMPLETED") > easyCompletionThreshold;
 
             // 고중요(starRating >= 4) 작업의 SNOOZED/COMPLETED 비율
             List<UserActivityLog> highImportanceLogs = userLogs.stream()
@@ -110,7 +113,7 @@ public class AdaptiveWeightEngine {
             double snoozedRate = rateOf(highImportanceLogs, "SNOOZED");
             double completionRate = rateOf(highImportanceLogs, "COMPLETED");
             boolean conditionB = !highImportanceLogs.isEmpty()
-                    && snoozedRate > HIGH_IMPORTANCE_SNOOZE_THRESHOLD;
+                    && snoozedRate > highImportanceSnoozeThreshold;
 
             Archetype archetype = classify(conditionA, conditionB, highImportanceLogs.isEmpty(), completionRate);
             switch (archetype) {
@@ -141,7 +144,7 @@ public class AdaptiveWeightEngine {
         if (conditionA && conditionB) {
             return Archetype.IMPORTANCE_AVOIDER;
         }
-        if (!highImportanceEmpty && highStarCompletionRate > MASTER_COMPLETION_THRESHOLD) {
+        if (!highImportanceEmpty && highStarCompletionRate > masterCompletionThreshold) {
             return Archetype.IMPORTANCE_MASTER;
         }
         return Archetype.NEUTRAL;
@@ -166,7 +169,7 @@ public class AdaptiveWeightEngine {
             double boostRate = 0.20 + (snoozedRate - 0.50) * 0.20;
             boostRate = Math.max(0.20, Math.min(0.30, boostRate));
 
-            double newW1 = Math.min(w1 * (1 + boostRate), W1_CAP);
+            double newW1 = Math.min(w1 * (1 + boostRate), w1Cap);
             double[] redistributed = splitRemaining(1.0 - newW1, w2, w3);
             saveWeights(profile, newW1, redistributed[0], redistributed[1]);
             recordChange(userId, w1, w2, w3, newW1, redistributed[0], redistributed[1], REASON_AVOIDER_BOOST);
@@ -183,14 +186,14 @@ public class AdaptiveWeightEngine {
     private void recoverImportanceTowardDefault(@NonNull Long userId) {
         userProfileRepository.findById(userId).ifPresent(profile -> {
             double w1 = profile.getW1();
-            if (w1 <= DEFAULT_W1) {
+            if (w1 <= defaultW1) {
                 log.info("User {} is a master but W1({}) already at/below default. No change.", userId, fmt(w1));
                 return;
             }
             double w2 = profile.getW2();
             double w3 = profile.getW3();
 
-            double newW1 = w1 + (DEFAULT_W1 - w1) * RECOVERY_RATE; // 기본값 쪽으로 당김
+            double newW1 = w1 + (defaultW1 - w1) * recoveryRate; // 기본값 쪽으로 당김
             double[] redistributed = splitRemaining(1.0 - newW1, w2, w3);
             saveWeights(profile, newW1, redistributed[0], redistributed[1]);
             recordChange(userId, w1, w2, w3, newW1, redistributed[0], redistributed[1], REASON_MASTER_RECOVER);
