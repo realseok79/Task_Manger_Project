@@ -7,6 +7,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -19,10 +20,12 @@ public class AdaptiveWeightEngine {
 
     private final UserActivityLogRepository activityLogRepository;
     private final UserProfileRepository userProfileRepository;
+    private final Clock clock;
 
-    public AdaptiveWeightEngine(UserActivityLogRepository activityLogRepository, UserProfileRepository userProfileRepository) {
+    public AdaptiveWeightEngine(UserActivityLogRepository activityLogRepository, UserProfileRepository userProfileRepository, Clock clock) {
         this.activityLogRepository = activityLogRepository;
         this.userProfileRepository = userProfileRepository;
+        this.clock = clock;
     }
 
     @Scheduled(cron = "0 0 0 * * ?") // 매일 자정 자동 실행
@@ -31,13 +34,13 @@ public class AdaptiveWeightEngine {
         log.info("Starting AdaptiveWeightEngine scheduler...");
 
         // 7일 경과 신규 유저 벌크 전환
-        LocalDateTime threshold = LocalDateTime.now().minusDays(7);
+        LocalDateTime threshold = LocalDateTime.now(clock).minusDays(7);
         int transitionedCount = userProfileRepository.bulkTransitionNewUsers(threshold);
         if (transitionedCount > 0) {
             log.info("Transitioned {} users from newUser=true to false", transitionedCount);
         }
 
-        LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusDays(1);
+        LocalDateTime twentyFourHoursAgo = LocalDateTime.now(clock).minusDays(1);
         List<UserActivityLog> logs = activityLogRepository.findByTimestampAfter(twentyFourHoursAgo);
 
         if (logs.isEmpty()) {

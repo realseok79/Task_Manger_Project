@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -18,10 +19,12 @@ public class ExplorationService {
 
     private final UserActivityLogRepository userActivityLogRepository;
     private final Random random;
+    private final Clock clock;
 
-    public ExplorationService(UserActivityLogRepository userActivityLogRepository, Random random) {
+    public ExplorationService(UserActivityLogRepository userActivityLogRepository, Random random, Clock clock) {
         this.userActivityLogRepository = userActivityLogRepository;
         this.random = random;
+        this.clock = clock;
     }
 
     public List<TaskResponse> applyExplorationMode(Long userId, List<TaskResponse> tasks) {
@@ -34,7 +37,7 @@ public class ExplorationService {
             log.info("Exploration Mode activated for user: {}", userId);
 
             // 최근 30일간의 로그 조회
-            LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
+            LocalDateTime thirtyDaysAgo = LocalDateTime.now(clock).minusDays(30);
             List<UserActivityLog> completedLogs = userActivityLogRepository
                     .findByUserIdAndTimestampAfterAndActivityType(userId, thirtyDaysAgo, "COMPLETED");
 

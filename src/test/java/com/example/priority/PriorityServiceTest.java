@@ -33,7 +33,7 @@ class PriorityServiceTest {
         userActivityLogRepository = mock(UserActivityLogRepository.class);
         mockRandom = mock(Random.class);
 
-        ExplorationService explorationService = new ExplorationService(userActivityLogRepository, mockRandom);
+        ExplorationService explorationService = new ExplorationService(userActivityLogRepository, mockRandom, Clock.systemDefaultZone());
         TaskResponseMapper taskResponseMapper = new TaskResponseMapper(new UrgencyEvaluator(Clock.systemDefaultZone()));
         priorityService = new PriorityService(priorityStrategy, userProfileRepository, explorationService, taskResponseMapper);
     }
