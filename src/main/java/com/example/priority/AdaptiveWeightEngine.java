@@ -31,16 +31,26 @@ public class AdaptiveWeightEngine {
     /** 고중요 작업 완료율이 이 값을 넘으면 '잘 처리하는' 마스터로 본다. */
     static final double MASTER_COMPLETION_THRESHOLD = 0.70;
 
+    // 감사 로그 변경 사유 코드
+    static final String REASON_AVOIDER_BOOST = "AVOIDER_BOOST";
+    static final String REASON_MASTER_RECOVER = "MASTER_RECOVER";
+    static final String REASON_RESET = "RESET";
+
     /** 학습이 감지하는 사용자 행동 유형. */
     enum Archetype { IMPORTANCE_AVOIDER, IMPORTANCE_MASTER, NEUTRAL }
 
     private final UserActivityLogRepository activityLogRepository;
     private final UserProfileRepository userProfileRepository;
+    private final WeightChangeLogRepository weightChangeLogRepository;
     private final Clock clock;
 
-    public AdaptiveWeightEngine(UserActivityLogRepository activityLogRepository, UserProfileRepository userProfileRepository, Clock clock) {
+    public AdaptiveWeightEngine(UserActivityLogRepository activityLogRepository,
+                                UserProfileRepository userProfileRepository,
+                                WeightChangeLogRepository weightChangeLogRepository,
+                                Clock clock) {
         this.activityLogRepository = activityLogRepository;
         this.userProfileRepository = userProfileRepository;
+        this.weightChangeLogRepository = weightChangeLogRepository;
         this.clock = clock;
     }
 
@@ -159,6 +169,7 @@ public class AdaptiveWeightEngine {
             double newW1 = Math.min(w1 * (1 + boostRate), W1_CAP);
             double[] redistributed = splitRemaining(1.0 - newW1, w2, w3);
             saveWeights(profile, newW1, redistributed[0], redistributed[1]);
+            recordChange(userId, w1, w2, w3, newW1, redistributed[0], redistributed[1], REASON_AVOIDER_BOOST);
 
             log.info("Boosted W1 for user {} (avoider): W1={} (+{}%)",
                     userId, fmt(newW1), String.format("%.2f", boostRate * 100));
@@ -182,6 +193,7 @@ public class AdaptiveWeightEngine {
             double newW1 = w1 + (DEFAULT_W1 - w1) * RECOVERY_RATE; // 기본값 쪽으로 당김
             double[] redistributed = splitRemaining(1.0 - newW1, w2, w3);
             saveWeights(profile, newW1, redistributed[0], redistributed[1]);
+            recordChange(userId, w1, w2, w3, newW1, redistributed[0], redistributed[1], REASON_MASTER_RECOVER);
 
             log.info("Recovered W1 toward default for user {} (master): W1 {} -> {}",
                     userId, fmt(w1), fmt(newW1));
@@ -201,6 +213,13 @@ public class AdaptiveWeightEngine {
         userProfileRepository.save(profile);
     }
 
+    /** 가중치 변경을 감사 로그로 남긴다(언제·왜·얼마나). */
+    private void recordChange(Long userId, double oldW1, double oldW2, double oldW3,
+                             double newW1, double newW2, double newW3, String reason) {
+        weightChangeLogRepository.save(new WeightChangeLog(
+                userId, oldW1, oldW2, oldW3, newW1, newW2, newW3, reason, LocalDateTime.now(clock)));
+    }
+
     private static String fmt(double d) {
         return String.format("%.4f", d);
     }
@@ -211,8 +230,12 @@ public class AdaptiveWeightEngine {
     @Transactional
     public void resetWeights(Long userId) {
         userProfileRepository.findById(userId).ifPresent(profile -> {
+            double oldW1 = profile.getW1();
+            double oldW2 = profile.getW2();
+            double oldW3 = profile.getW3();
             profile.resetToDefaultWeights();
             userProfileRepository.save(profile);
+            recordChange(userId, oldW1, oldW2, oldW3, profile.getW1(), profile.getW2(), profile.getW3(), REASON_RESET);
             log.info("Reset weights to default for user {}", userId);
         });
     }

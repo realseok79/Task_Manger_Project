@@ -8,6 +8,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -27,10 +28,14 @@ class AdaptiveWeightEngineTest {
     @Autowired
     private UserProfileRepository userProfileRepository;
 
+    @Autowired
+    private WeightChangeLogRepository weightChangeLogRepository;
+
     @BeforeEach
     void setUp() {
         activityLogRepository.deleteAll();
         userProfileRepository.deleteAll();
+        weightChangeLogRepository.deleteAll();
     }
 
     @Test
@@ -294,5 +299,49 @@ class AdaptiveWeightEngineTest {
         assertEquals(0.50, updated.getW1(), 0.0001);
         assertEquals(0.30, updated.getW2(), 0.0001);
         assertEquals(0.20, updated.getW3(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("감사 로그 - 편식 패턴으로 가중치가 오르면 AVOIDER_BOOST 변경 이력이 남는다")
+    void learnAndAdjustWeights_RecordsAuditLog() {
+        Long userId = 10L;
+        UserProfile profile = new UserProfile(userId, 0.40, 0.30, 0.30);
+        profile.setNewUser(false);
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 20, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 2, 15, now.minusHours(4)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 30, now.minusHours(6)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 4, 60, now.minusHours(1)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 5, 120, now.minusHours(3)));
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 4, 90, now.minusHours(5)));
+
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        List<WeightChangeLog> logs = weightChangeLogRepository.findByUserIdOrderByChangedAtDesc(userId);
+        assertEquals(1, logs.size());
+        WeightChangeLog change = logs.get(0);
+        assertEquals("AVOIDER_BOOST", change.getReason());
+        assertEquals(0.40, change.getOldW1(), 0.0001);
+        assertEquals(0.4933, change.getNewW1(), 0.001);
+        assertNotNull(change.getChangedAt());
+    }
+
+    @Test
+    @DisplayName("감사 로그 - resetWeights는 RESET 변경 이력을 남긴다")
+    void resetWeights_RecordsAuditLog() {
+        Long userId = 11L;
+        UserProfile profile = new UserProfile(userId, 0.90, 0.06, 0.04);
+        profile.setNewUser(false);
+        userProfileRepository.save(profile);
+
+        adaptiveWeightEngine.resetWeights(userId);
+
+        List<WeightChangeLog> logs = weightChangeLogRepository.findByUserIdOrderByChangedAtDesc(userId);
+        assertEquals(1, logs.size());
+        assertEquals("RESET", logs.get(0).getReason());
+        assertEquals(0.90, logs.get(0).getOldW1(), 0.0001);
+        assertEquals(0.50, logs.get(0).getNewW1(), 0.0001);
     }
 }
