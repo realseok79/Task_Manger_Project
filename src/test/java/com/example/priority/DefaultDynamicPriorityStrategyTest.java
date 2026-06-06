@@ -1,84 +1,87 @@
 package com.example.priority;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
+import static org.assertj.core.api.Assertions.within;
 
+@DisplayName("DefaultDynamicPriorityStrategy 단위 테스트 - 정규화된 점수")
 class DefaultDynamicPriorityStrategyTest {
 
-    private final DefaultDynamicPriorityStrategy strategy = new DefaultDynamicPriorityStrategy();
+    // 결정론적 검증을 위해 시계를 2026-06-06T12:00에 고정한다.
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 6, 6, 12, 0);
 
-    @Test
-    @DisplayName("정상 케이스 - 마감까지 60분 남은 경우 정확한 우선순위 점수를 계산한다")
-    void calculate_NormalCase_60MinutesLeft() {
-        // Given
-        // ChronoUnit.MINUTES.between(LocalDateTime.now(), task.getDueDate()) 계산 시
-        // 계산 시점의 미세한 시간차로 인해 59분이 반환되는 것을 방지하기 위해 5초의 여유를 추가합니다.
-        LocalDateTime dueDate = LocalDateTime.now().plusMinutes(60).plusSeconds(5);
-        Task task = new Task(1L, "DEV", dueDate, 3, 2); // id=1L, category="DEV", starRating=3, delayCount=2
-        UserProfile profile = new UserProfile(1L, 2.0, 100.0, 1.5); // W1=2.0, W2=100.0, W3=1.5
+    private DefaultDynamicPriorityStrategy strategy;
 
-        // Expected Score Calculation:
-        // dt = 60
-        // score = (3 * 2.0) + (100.0 / (60 + 10.0)) - (2 * 1.5)
-        //       = 6.0 + (100.0 / 70.0) - 3.0
-        //       = 6.0 + 1.4285714285714286 - 3.0
-        //       = 4.428571428571429
-        double expectedScore = (3 * 2.0) + (100.0 / (60.0 + 10.0)) - (2 * 1.5);
+    @BeforeEach
+    void setUp() {
+        Clock fixed = Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        strategy = new DefaultDynamicPriorityStrategy(new UrgencyEvaluator(fixed));
+    }
 
-        // When
-        double actualScore = strategy.calculate(task, profile);
-
-        // Then
-        assertEquals(expectedScore, actualScore, 0.0001);
+    private Task task(int starRating, LocalDateTime dueDate, int delayCount) {
+        return new Task(1L, "T", "DEV", dueDate, starRating, delayCount);
     }
 
     @Test
-    @DisplayName("Overdue 케이스 - 마감이 30분 지난 경우 안전하게 dt를 0으로 보정하여 계산한다")
-    void calculate_OverdueCase_30MinutesOverdue() {
-        // Given
-        // 마감이 지난 상태(dt = -30분)
-        LocalDateTime dueDate = LocalDateTime.now().minusMinutes(30);
-        Task task = new Task(1L, "DEV", dueDate, 3, 2); // id=1L, category="DEV", starRating=3, delayCount=2
-        UserProfile profile = new UserProfile(1L, 2.0, 100.0, 1.5); // W1=2.0, W2=100.0, W3=1.5
+    @DisplayName("정규화 정상 케이스 - 마감 60분·중요도 3·연기 2 (W=0.5/0.3/0.2)")
+    void normalizedNormalCase() {
+        // importance=3/5=0.6, urgency=120/(60+120)=0.6667, delay=2/5=0.4
+        // score = 0.5*0.6 + 0.3*0.66667 - 0.2*0.4 = 0.3 + 0.2 - 0.08 = 0.42
+        double score = strategy.calculate(task(3, NOW.plusMinutes(60), 2), new UserProfile(1L, 0.5, 0.3, 0.2));
 
-        // Expected Score Calculation:
-        // dt < 0 이므로 safeDt = 0.0
-        // score = (3 * 2.0) + (100.0 / (0 + 10.0)) - (2 * 1.5)
-        //       = 6.0 + 10.0 - 3.0
-        //       = 13.0
-        double expectedScore = (3 * 2.0) + (100.0 / (0.0 + 10.0)) - (2 * 1.5);
-
-        // When
-        double actualScore = strategy.calculate(task, profile);
-
-        // Then
-        assertEquals(expectedScore, actualScore, 0.0001);
+        assertThat(score).isCloseTo(0.42, within(0.0001));
     }
 
     @Test
-    @DisplayName("DelayCount가 높은 경우 - 마이너스 점수가 나오는 상황에서 하한선 0.0이 적용된다")
-    void calculate_HighDelayCount_ShouldClampToZero() {
-        // Given
-        LocalDateTime dueDate = LocalDateTime.now().plusMinutes(60).plusSeconds(5);
-        // 지연 횟수가 매우 높아 공식 상 음수가 나오는 태스크 생성
-        Task task = new Task(1L, "DEV", dueDate, 1, 50); // id=1L, category="DEV", starRating=1, delayCount=50
-        UserProfile profile = new UserProfile(1L, 1.0, 10.0, 2.0); // W1=1.0, W2=10.0, W3=2.0
+    @DisplayName("Overdue - 마감 경과 작업은 긴급도가 최대(1.0)로 반영된다")
+    void overdueGetsMaxUrgency() {
+        // urgency=120/(0+120)=1.0
+        // score = 0.5*0.6 + 0.3*1.0 - 0.2*0.4 = 0.3 + 0.3 - 0.08 = 0.52
+        double score = strategy.calculate(task(3, NOW.minusMinutes(30), 2), new UserProfile(1L, 0.5, 0.3, 0.2));
 
-        // Expected Score Calculation:
-        // dt = 60
-        // rawScore = (1 * 1.0) + (10.0 / 70.0) - (50 * 2.0)
-        //          = 1.0 + 0.142857 - 100.0
-        //          = -98.857143
-        // Clamped to 0.0
+        assertThat(score).isCloseTo(0.52, within(0.0001));
+    }
 
-        // When
-        double actualScore = strategy.calculate(task, profile);
+    @Test
+    @DisplayName("지연 페널티가 커서 음수가 되면 하한선 0.0이 적용된다")
+    void clampsToZero() {
+        // importance=1/5=0.2, urgency=120/420=0.28571, delay=min(50/5,1)=1.0
+        // score = 0.5*0.2 + 0.3*0.28571 - 0.2*1.0 = 0.1 + 0.08571 - 0.2 = -0.0143 → 0.0
+        double score = strategy.calculate(task(1, NOW.plusMinutes(300), 50), new UserProfile(1L, 0.5, 0.3, 0.2));
 
-        // Then
-        assertEquals(0.0, actualScore, 0.0001);
+        assertThat(score).isZero();
+    }
+
+    @Test
+    @DisplayName("마감이 null이어도 NPE 없이 긴급도 0으로 안전하게 계산한다")
+    void nullDeadlineIsSafe() {
+        UserProfile profile = new UserProfile(1L, 0.5, 0.3, 0.2);
+        Task noDeadline = task(4, null, 0);
+
+        assertThatCode(() -> strategy.calculate(noDeadline, profile)).doesNotThrowAnyException();
+        // urgency=0, delay=0 → score = 0.5*(4/5) = 0.4
+        assertThat(strategy.calculate(noDeadline, profile)).isCloseTo(0.4, within(0.0001));
+    }
+
+    @Test
+    @DisplayName("핵심 개선 - 긴급도가 중요도와 경쟁한다(임박한 저중요 작업이 먼 고중요 작업을 이길 수 있다)")
+    void urgencyCompetesWithImportance() {
+        // 긴급도 가중치가 높은 프로필(W=0.2/0.7/0.1)
+        UserProfile urgencyDriven = new UserProfile(1L, 0.2, 0.7, 0.1);
+
+        // 임박(10분 후)·중요도 낮음(2) vs 멀리(2000분 후)·중요도 높음(4)
+        double imminentLowStar = strategy.calculate(task(2, NOW.plusMinutes(10), 0), urgencyDriven);
+        double farHighStar = strategy.calculate(task(4, NOW.plusMinutes(2000), 0), urgencyDriven);
+
+        // 기존 비정규화 공식에서는 긴급도가 무력해 항상 고중요(far)가 이겼다. 정규화 후엔 임박이 이긴다.
+        assertThat(imminentLowStar).isGreaterThan(farHighStar);
     }
 }
