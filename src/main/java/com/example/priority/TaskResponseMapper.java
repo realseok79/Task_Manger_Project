@@ -19,8 +19,8 @@ public class TaskResponseMapper {
         }
 
         // urgencyLevel을 점수 공식과 동일한 긴급도(UrgencyEvaluator)에서 산출한다(단일 진실).
-        // 기존엔 매퍼가 절대 임계값(60/180분)으로 따로 계산해 점수의 긴급도와 어긋났다.
-        String urgencyLevel = urgencyEvaluator.level(task.getDueDate());
+        // 마감 있으면 시간 기반, 없으면 방치(aging) 기반(NONE/STALE).
+        String urgencyLevel = urgencyEvaluator.level(task);
 
         boolean isZombie = task.getDelayCount() >= 5;
 

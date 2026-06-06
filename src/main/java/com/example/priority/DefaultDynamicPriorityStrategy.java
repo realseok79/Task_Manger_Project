@@ -26,7 +26,8 @@ public class DefaultDynamicPriorityStrategy implements PriorityStrategy {
         // 긴급도가 사실상 무시됐고, W1+W2+W3=1.0을 전제하는 AdaptiveWeightEngine과도 어긋났다.
         // 정규화로 세 요소가 동일 스케일(0~1)에서 가중치만큼 경쟁하게 만든다.
         double importanceNorm = clampUnit(task.getStarRating() / MAX_STAR_RATING);
-        double urgencyNorm = urgencyEvaluator.factor(task.getDueDate()); // null-safe, 0~1, 단일 시간원
+        // 마감 있으면 시간 기반, 없으면 방치(aging) 기반 긴급도 → 무마감 작업이 0으로 가라앉지 않음
+        double urgencyNorm = urgencyEvaluator.factor(task); // null-safe, 0~1, 단일 진실
         double delayNorm = clampUnit(task.getDelayCount() / DELAY_PENALTY_CAP);
 
         double score = profile.getW1() * importanceNorm

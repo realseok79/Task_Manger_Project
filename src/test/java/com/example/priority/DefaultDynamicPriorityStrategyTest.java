@@ -84,4 +84,18 @@ class DefaultDynamicPriorityStrategyTest {
         // 기존 비정규화 공식에서는 긴급도가 무력해 항상 고중요(far)가 이겼다. 정규화 후엔 임박이 이긴다.
         assertThat(imminentLowStar).isGreaterThan(farHighStar);
     }
+
+    @Test
+    @DisplayName("무마감 작업은 연기(방치)가 쌓일수록 긴급도가 올라가 0으로 가라앉지 않는다")
+    void noDeadlineAgingRaisesUrgency() {
+        // 긴급도만 보는 프로필(W2=1)로 aging 효과를 격리
+        UserProfile urgencyOnly = new UserProfile(1L, 0.0, 1.0, 0.0);
+
+        double fresh = strategy.calculate(task(3, null, 0), urgencyOnly);     // 방치 0 → aging 0
+        double neglected = strategy.calculate(task(3, null, 5), urgencyOnly); // 방치 5 → 5/(5+5)=0.5
+
+        assertThat(fresh).isZero();
+        assertThat(neglected).isGreaterThan(fresh);
+        assertThat(neglected).isCloseTo(0.5, within(0.0001));
+    }
 }

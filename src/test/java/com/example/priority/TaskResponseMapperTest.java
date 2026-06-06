@@ -112,4 +112,16 @@ class TaskResponseMapperTest {
         Task noDeadline = new Task(3L, "T", "DEV", null, 3, 0);
         assertEquals("마감 없음", mapper.toResponse(noDeadline, 1.0).getReason());
     }
+
+    @Test
+    @DisplayName("마감 없는 작업이 여러 번 방치되면 urgencyLevel이 NONE→STALE로 승격된다")
+    void toResponse_NoDeadline_Neglected_Stale() {
+        // 방치 0 → aging 0 < 0.33 → NONE
+        Task fresh = new Task(1L, "T", "DEV", null, 3, 0);
+        assertEquals("NONE", mapper.toResponse(fresh, 1.0).getUrgencyLevel());
+
+        // 방치 5 → aging 0.5 >= 0.33 → STALE
+        Task neglected = new Task(2L, "T", "DEV", null, 3, 5);
+        assertEquals("STALE", mapper.toResponse(neglected, 1.0).getUrgencyLevel());
+    }
 }

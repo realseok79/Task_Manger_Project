@@ -29,11 +29,14 @@ public class UrgencyEvaluator {
     static final double HALF_LIFE_MINUTES = 120.0;
     static final double RED_THRESHOLD = 0.66;
     static final double YELLOW_THRESHOLD = 0.33;
+    /** 마감 없는 작업의 방치 긴급도가 0.5가 되는 delayCount(연기 횟수). */
+    static final double AGING_HALF_LIFE = 5.0;
 
     static final String RED = "RED";
     static final String YELLOW = "YELLOW";
     static final String GREEN = "GREEN";
     static final String NONE = "NONE";
+    static final String STALE = "STALE";
 
     private final Clock clock;
 
@@ -72,5 +75,34 @@ public class UrgencyEvaluator {
             return YELLOW;
         }
         return GREEN;
+    }
+
+    // ── Task 기준 단일 진입점 (마감 있으면 시간, 없으면 방치) ──────────────
+
+    /**
+     * 작업의 긴급도(0~1). 마감이 있으면 시간 기반, 없으면 방치(aging) 기반으로 계산해
+     * 마감 없는 작업이 영영 0으로 가라앉지 않게 한다(미루면 가라앉는 death-spiral 완화).
+     */
+    public double factor(Task task) {
+        if (task.getDueDate() != null) {
+            return factor(task.getDueDate());
+        }
+        return agingFactor(task.getDelayCount());
+    }
+
+    /** 색 등급. 마감 없는 작업은 방치가 누적되면 NONE → STALE로 승격(점수의 긴급도와 동일 기준). */
+    public String level(Task task) {
+        if (task.getDueDate() != null) {
+            return level(task.getDueDate());
+        }
+        return agingFactor(task.getDelayCount()) >= YELLOW_THRESHOLD ? STALE : NONE;
+    }
+
+    /** 마감 없는 작업의 방치 긴급도: 연기 횟수가 쌓일수록 0 → 1로 증가(delayCount=AGING_HALF_LIFE에서 0.5). */
+    public double agingFactor(int delayCount) {
+        if (delayCount <= 0) {
+            return 0.0;
+        }
+        return delayCount / (delayCount + AGING_HALF_LIFE);
     }
 }
