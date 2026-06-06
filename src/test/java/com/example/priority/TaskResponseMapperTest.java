@@ -14,7 +14,6 @@ import static org.junit.jupiter.api.Assertions.*;
 class TaskResponseMapperTest {
 
     private TaskResponseMapper mapper;
-    private Clock fixedClock;
     private LocalDateTime baseTime;
 
     @BeforeEach
@@ -22,12 +21,13 @@ class TaskResponseMapperTest {
         // Base time: 2026-05-27T10:00:00
         baseTime = LocalDateTime.of(2026, 5, 27, 10, 0, 0);
         Instant instant = baseTime.atZone(ZoneId.systemDefault()).toInstant();
-        fixedClock = Clock.fixed(instant, ZoneId.systemDefault());
-        mapper = new TaskResponseMapper(fixedClock);
+        Clock fixedClock = Clock.fixed(instant, ZoneId.systemDefault());
+        // urgencyLevel은 점수와 동일한 UrgencyEvaluator(factor 기반)에서 산출된다.
+        mapper = new TaskResponseMapper(new UrgencyEvaluator(fixedClock));
     }
 
     @Test
-    @DisplayName("마감이 이미 지난 overdue 작업(dt < 0)은 urgencyLevel이 RED이다")
+    @DisplayName("마감 경과 작업(factor=1.0)은 urgencyLevel이 RED이다")
     void toResponse_Overdue_Red() {
         Task task = new Task(1L, "Overdue Task", "DEV", baseTime.minusMinutes(10), 3, 0);
         TaskResponse response = mapper.toResponse(task, 95.123);
@@ -37,34 +37,42 @@ class TaskResponseMapperTest {
     }
 
     @Test
-    @DisplayName("마감까지 1시간 이내(dt <= 60)인 작업은 urgencyLevel이 RED이다")
-    void toResponse_Within60Minutes_Red() {
-        Task task = new Task(1L, "Urgent Task", "DEV", baseTime.plusMinutes(60), 3, 0);
+    @DisplayName("마감 임박(30분 후, factor=0.8 ≥ 0.66)은 urgencyLevel이 RED이다")
+    void toResponse_Imminent_Red() {
+        // factor = 120/(30+120) = 0.8
+        Task task = new Task(1L, "Urgent Task", "DEV", baseTime.plusMinutes(30), 3, 0);
         TaskResponse response = mapper.toResponse(task, 95.123);
 
         assertEquals("RED", response.getUrgencyLevel());
     }
 
     @Test
-    @DisplayName("마감까지 1시간 초과 3시간 이하(60 < dt <= 180)인 작업은 urgencyLevel이 YELLOW이다")
-    void toResponse_Within180Minutes_Yellow() {
-        Task task1 = new Task(1L, "Yellow Task 1", "DEV", baseTime.plusMinutes(61), 3, 0);
-        TaskResponse response1 = mapper.toResponse(task1, 95.123);
+    @DisplayName("중간 임박(120분 후, factor=0.5)은 urgencyLevel이 YELLOW이다")
+    void toResponse_Mid_Yellow() {
+        // factor = 120/(120+120) = 0.5 (0.33 ≤ 0.5 < 0.66)
+        Task task = new Task(1L, "Yellow Task", "DEV", baseTime.plusMinutes(120), 3, 0);
+        TaskResponse response = mapper.toResponse(task, 95.123);
 
-        Task task2 = new Task(2L, "Yellow Task 2", "DEV", baseTime.plusMinutes(180), 3, 0);
-        TaskResponse response2 = mapper.toResponse(task2, 95.123);
-
-        assertEquals("YELLOW", response1.getUrgencyLevel());
-        assertEquals("YELLOW", response2.getUrgencyLevel());
+        assertEquals("YELLOW", response.getUrgencyLevel());
     }
 
     @Test
-    @DisplayName("마감까지 3시간 초과(dt > 180)인 작업은 urgencyLevel이 GREEN이다")
-    void toResponse_MoreThan180Minutes_Green() {
-        Task task = new Task(1L, "Green Task", "DEV", baseTime.plusMinutes(181), 3, 0);
+    @DisplayName("여유 있는 작업(600분 후, factor=0.167 < 0.33)은 urgencyLevel이 GREEN이다")
+    void toResponse_Relaxed_Green() {
+        // factor = 120/(600+120) = 0.167
+        Task task = new Task(1L, "Green Task", "DEV", baseTime.plusMinutes(600), 3, 0);
         TaskResponse response = mapper.toResponse(task, 95.123);
 
         assertEquals("GREEN", response.getUrgencyLevel());
+    }
+
+    @Test
+    @DisplayName("마감이 없는 작업은 urgencyLevel이 NONE이다 (GREEN으로 위장하지 않는다)")
+    void toResponse_NoDeadline_None() {
+        Task task = new Task(1L, "No Deadline Task", "DEV", null, 3, 0);
+        TaskResponse response = mapper.toResponse(task, 95.123);
+
+        assertEquals("NONE", response.getUrgencyLevel());
     }
 
     @Test
