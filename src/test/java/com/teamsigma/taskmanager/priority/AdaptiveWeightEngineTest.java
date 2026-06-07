@@ -4,20 +4,25 @@ import com.teamsigma.taskmanager.domain.UserProfile;
 import com.teamsigma.taskmanager.domain.UserActivityLog;
 import com.teamsigma.taskmanager.repository.UserActivityLogRepository;
 import com.teamsigma.taskmanager.repository.UserProfileRepository;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+/**
+ * NOTE: 이 테스트는 @Transactional 을 쓰지 않는다.
+ * 가중치 갱신이 WeightUpdateDelegate(REQUIRES_NEW)의 독립 트랜잭션에서 수행되므로,
+ * 테스트 트랜잭션 안에서 미커밋 상태로 준비한 데이터는 새 트랜잭션에서 보이지 않는다.
+ * 따라서 셋업 데이터를 실제 커밋하고, @BeforeEach/@AfterEach 에서 직접 정리한다.
+ */
 @SpringBootTest
-@Transactional
 class AdaptiveWeightEngineTest {
 
     @Autowired
@@ -30,7 +35,8 @@ class AdaptiveWeightEngineTest {
     private UserProfileRepository userProfileRepository;
 
     @BeforeEach
-    void setUp() {
+    @AfterEach
+    void clean() {
         activityLogRepository.deleteAll();
         userProfileRepository.deleteAll();
     }
