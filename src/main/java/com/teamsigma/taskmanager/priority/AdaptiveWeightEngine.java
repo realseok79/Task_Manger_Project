@@ -2,41 +2,55 @@ package com.teamsigma.taskmanager.priority;
 
 import com.teamsigma.taskmanager.domain.UserActivityLog;
 import com.teamsigma.taskmanager.repository.UserActivityLogRepository;
-import com.teamsigma.taskmanager.repository.UserProfileRepository;
+import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.CannotAcquireLockException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * 매일 자정(또는 설정된 주기) 최근 24시간 행동 로그를 학습해 유저별 가중치를 조정하는 배치.
+ *
+ * 트랜잭션 전략: 이 메서드 자체는 트랜잭션이 없다. 유저별 갱신은 {@link WeightUpdateDelegate}
+ * (REQUIRES_NEW)에 위임하여 한 유저의 실패가 전체 배치를 롤백시키지 않도록 격리한다.
+ * 실패는 유저 단위로 catch 하여 로그를 남기고 다음 유저로 진행한다.
+ */
 @Component
 public class AdaptiveWeightEngine {
 
     private static final Logger log = LoggerFactory.getLogger(AdaptiveWeightEngine.class);
 
-    private final UserActivityLogRepository activityLogRepository;
-    private final UserProfileRepository userProfileRepository;
+    private static final long SLOW_USER_THRESHOLD_MS = 500L;
 
-    public AdaptiveWeightEngine(UserActivityLogRepository activityLogRepository, UserProfileRepository userProfileRepository) {
+    private final UserActivityLogRepository activityLogRepository;
+    private final WeightUpdateDelegate weightUpdateDelegate;
+
+    public AdaptiveWeightEngine(UserActivityLogRepository activityLogRepository,
+                                WeightUpdateDelegate weightUpdateDelegate) {
         this.activityLogRepository = activityLogRepository;
-        this.userProfileRepository = userProfileRepository;
+        this.weightUpdateDelegate = weightUpdateDelegate;
     }
 
-    @Scheduled(cron = "0 0 0 * * ?") // 매일 자정 자동 실행
-    @Transactional
+    // cron 은 외부화: 미설정 시 SpEL 기본값(매일 자정)으로 동작, 환경변수 APP_SCHEDULER_WEIGHT_UPDATE_CRON 로 override.
+    // 테스트 환경에서는 "-"(Scheduled.CRON_DISABLED)로 설정하여 자동 실행을 비활성화한다.
+    @Scheduled(cron = "${app.scheduler.weight-update-cron:0 0 0 * * ?}")
     public void learnAndAdjustWeights() {
-        log.info("Starting AdaptiveWeightEngine scheduler...");
+        Instant batchStart = Instant.now();
 
         LocalDateTime twentyFourHoursAgo = LocalDateTime.now().minusDays(1);
         List<UserActivityLog> logs = activityLogRepository.findByLoggedAtAfter(twentyFourHoursAgo);
 
         if (logs.isEmpty()) {
-            log.info("No user activity logs found in the last 24 hours.");
+            log.info("[AdaptiveWeight] 최근 24시간 행동 로그 없음. 배치 종료.");
             return;
         }
 
@@ -44,87 +58,50 @@ public class AdaptiveWeightEngine {
         Map<Long, List<UserActivityLog>> logsByUser = logs.stream()
                 .collect(Collectors.groupingBy(UserActivityLog::getUserId));
 
+        int targetCount = logsByUser.size();
+        log.info("[AdaptiveWeight] 배치 시작. 대상 유저 수={}", targetCount);
+
+        int successCount = 0;
+        int failCount = 0;
+
         for (Map.Entry<Long, List<UserActivityLog>> entry : logsByUser.entrySet()) {
             Long userId = entry.getKey();
             List<UserActivityLog> userLogs = entry.getValue();
-
-            // 편식 패턴 판정
-            // 조건A: 예상 소요 30분 이하 + 중요도 낮은(starRating <= 2) 작업 완료율 > 70%
-            List<UserActivityLog> lowEffortLogs = userLogs.stream()
-                    .filter(l -> l.getEstimatedTime() <= 30 && l.getStarRating() <= 2)
-                    .toList();
-
-            boolean conditionA = false;
-            if (!lowEffortLogs.isEmpty()) {
-                long completedCount = lowEffortLogs.stream()
-                        .filter(l -> "COMPLETED".equals(l.getActivityType()))
-                        .count();
-                double completionRate = (double) completedCount / lowEffortLogs.size();
-                conditionA = completionRate > 0.70;
-            }
-
-            // 조건B: 중요도 높은(starRating >= 4) 작업의 SNOOZED 비율 > 50%
-            List<UserActivityLog> highImportanceLogs = userLogs.stream()
-                    .filter(l -> l.getStarRating() >= 4)
-                    .toList();
-
-            boolean conditionB = false;
-            double snoozedRate = 0.0;
-            if (!highImportanceLogs.isEmpty()) {
-                long snoozedCount = highImportanceLogs.stream()
-                        .filter(l -> "SNOOZED".equals(l.getActivityType()))
-                        .count();
-                snoozedRate = (double) snoozedCount / highImportanceLogs.size();
-                conditionB = snoozedRate > 0.50;
-            }
-
-            // 조건A AND 조건B 동시 충족 시 편식 패턴 판정
-            if (conditionA && conditionB) {
-                log.info("Picky pattern detected for user: {}", userId);
-                adjustUserProfileWeights(userId, snoozedRate);
-            } else {
-                log.info("User {} has a normal activity pattern.", userId);
+            try {
+                long start = System.currentTimeMillis();
+                // 별도 Bean 호출(프록시 경유) → REQUIRES_NEW 독립 트랜잭션. self-invocation 아님.
+                weightUpdateDelegate.updateWeightForUser(userId, userLogs);
+                long elapsed = System.currentTimeMillis() - start;
+                if (elapsed > SLOW_USER_THRESHOLD_MS) {
+                    log.warn("[AdaptiveWeight] userId={} 처리시간 {}ms 초과", userId, elapsed);
+                }
+                successCount++;
+            } catch (EntityNotFoundException e) {
+                // 데이터 없음 → 건너뜀
+                log.warn("[AdaptiveWeight] userId={} 가중치 데이터 없음, 건너뜀. reason={}", userId, e.getMessage());
+                failCount++;
+            } catch (DataIntegrityViolationException e) {
+                // 데이터 정합성 오류 → 알림 필요
+                log.error("[AdaptiveWeight] userId={} 데이터 정합성 오류, 건너뜀. reason={}", userId, e.getMessage(), e);
+                failCount++;
+            } catch (CannotAcquireLockException e) {
+                // 락 충돌 → 재시도 없이 건너뜀
+                log.error("[AdaptiveWeight] userId={} 락 충돌, 재시도 없이 건너뜀. reason={}", userId, e.getMessage(), e);
+                failCount++;
+            } catch (Exception e) {
+                // 그 외 예외 → 건너뜀. 절대 전체 배치를 중단하지 않는다.
+                log.error("[AdaptiveWeight] userId={} 업데이트 실패, 건너뜀. reason={}", userId, e.getMessage(), e);
+                failCount++;
             }
         }
-        log.info("AdaptiveWeightEngine scheduler execution finished.");
-    }
 
-    private void adjustUserProfileWeights(Long userId, double snoozedRate) {
-        userProfileRepository.findById(userId).ifPresent(profile -> {
-            double w1 = profile.getW1();
-            double w2 = profile.getW2();
-            double w3 = profile.getW3();
+        long totalMs = Duration.between(batchStart, Instant.now()).toMillis();
+        log.info("[AdaptiveWeight] 배치 완료. 총={} 성공={} 실패={} 소요시간={}ms",
+                targetCount, successCount, failCount, totalMs);
 
-            // boostRate는 SNOOZED 비율(0.50 ~ 1.00)에 비례하여 0.20 ~ 0.30 범위에서 계산
-            // 선형 매핑 공식: 0.20 + (snoozedRate - 0.50) * (0.30 - 0.20) / (1.00 - 0.50)
-            double boostRate = 0.20 + (snoozedRate - 0.50) * 0.20;
-            boostRate = Math.max(0.20, Math.min(0.30, boostRate)); // 범위 안전장치
-
-            // 편식 패턴 감지 시: W1 = W1 * (1 + boostRate)
-            double newW1 = w1 * (1 + boostRate);
-            
-            // W1 상한선 설정 (W2, W3에 최소한의 가중치를 할당하여 합이 1.0이 되도록 보장)
-            newW1 = Math.min(newW1, 0.90);
-
-            double remainingWeight = 1.0 - newW1;
-            double newW2;
-            double newW3;
-
-            if (w2 + w3 > 0.0) {
-                newW2 = remainingWeight * (w2 / (w2 + w3));
-                newW3 = remainingWeight * (w3 / (w2 + w3));
-            } else {
-                // 기존 W2, W3의 비율이 없는 경우 균등하게 나눔
-                newW2 = remainingWeight / 2.0;
-                newW3 = remainingWeight / 2.0;
-            }
-
-            profile.updateWeights(newW1, newW2, newW3);
-            userProfileRepository.save(profile);
-
-            log.info("Adjusted weights for user {}: W1={}(+{}%), W2={}, W3={}",
-                    userId, String.format("%.4f", newW1), String.format("%.2f", boostRate * 100),
-                    String.format("%.4f", newW2), String.format("%.4f", newW3));
-        });
+        // 실패율 10% 초과 시 경보
+        if (failCount * 10 > targetCount) {
+            log.warn("[AdaptiveWeight] 실패율 {}% 초과. 운영팀 확인 필요.", failCount * 100 / targetCount);
+        }
     }
 }
