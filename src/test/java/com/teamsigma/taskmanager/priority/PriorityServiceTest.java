@@ -44,8 +44,7 @@ class PriorityServiceTest {
 
         ExplorationService explorationService = new ExplorationService(userActivityLogRepository);
         explorationService.setRandom(mockRandom);
-        UrgencyEvaluator urgencyEvaluator = new UrgencyEvaluator(Clock.systemDefaultZone());
-        TaskResponseMapper taskResponseMapper = new TaskResponseMapper(urgencyEvaluator);
+        TaskResponseMapper taskResponseMapper = new TaskResponseMapper(new UrgencyEvaluator(Clock.systemDefaultZone()));
         priorityService = new PriorityService(priorityStrategy, userProfileRepository, explorationService, taskResponseMapper);
         user = User.builder().email("jungwoo@sigma.com").nickname("박정우").build();
     }
@@ -67,7 +66,7 @@ class PriorityServiceTest {
                 .title("taskA")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusDays(2))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DEV")
                 .build();
@@ -76,7 +75,7 @@ class PriorityServiceTest {
                 .title("taskB")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusDays(2))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DOCS")
                 .build();
@@ -136,7 +135,7 @@ class PriorityServiceTest {
                 .title("taskA")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusDays(2))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DEV")
                 .build();
@@ -145,7 +144,7 @@ class PriorityServiceTest {
                 .title("taskB")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusDays(2))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DOCS")
                 .build();
