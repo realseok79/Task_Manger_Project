@@ -1,0 +1,55 @@
+.topbar {
+  height: var(--topbar-height);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: 0 var(--space-8);
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.topbar__menu { display: none; }
+
+.topbar__search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex: 1;
+  max-width: 520px;
+  padding: 9px 16px;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-pill);
+  color: var(--color-text-secondary);
+}
+.topbar__search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text-primary);
+}
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+}
+.topbar__bell { position: relative; }
+.topbar__dot {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--color-danger);
+  border: 1.5px solid var(--color-surface);
+}
+
+@media (max-width: 768px) {
+  .topbar { padding: 0 var(--space-4); }
+  .topbar__menu { display: inline-flex; }
+}

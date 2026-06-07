@@ -1,0 +1,32 @@
+.ai-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  background: var(--color-timer-blue-soft);
+  border: 1px solid var(--color-border);
+}
+.ai-banner--alert { background: var(--color-zombie-bg); border-color: var(--color-zombie-border); }
+.ai-banner--stable { background: var(--color-card); }
+
+.ai-banner__icon {
+  display: inline-flex;
+  color: var(--color-timer-blue);
+}
+.ai-banner__message {
+  margin: 0;
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: var(--fs-sm);
+  color: var(--color-text-primary);
+  line-height: 1.5;
+}
+.ai-banner__cta {
+  flex-shrink: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--color-timer-blue);
+  white-space: nowrap;
+}
+.ai-banner__cta:hover { text-decoration: underline; }
