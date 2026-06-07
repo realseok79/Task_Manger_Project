@@ -4,110 +4,75 @@ import com.teamsigma.taskmanager.domain.EnergyLevel;
 import com.teamsigma.taskmanager.domain.Task;
 import com.teamsigma.taskmanager.domain.User;
 import com.teamsigma.taskmanager.domain.UserProfile;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+@DisplayName("DefaultDynamicPriorityStrategy - 정규화된 점수")
 class DefaultDynamicPriorityStrategyTest {
 
-    private final DefaultDynamicPriorityStrategy strategy = new DefaultDynamicPriorityStrategy();
+    private static final LocalDateTime NOW = LocalDateTime.of(2026, 6, 7, 12, 0);
 
-    @Test
-    @DisplayName("정상 케이스 - 마감까지 60분 남은 경우 정확한 우선순위 점수를 계산한다")
-    void calculate_NormalCase_60MinutesLeft() {
-        // Given
-        LocalDateTime deadline = LocalDateTime.now().plusMinutes(60).plusSeconds(5);
-        User user = User.builder().email("test@sigma.com").nickname("test").build();
-        Task task = Task.builder()
-                .user(user)
-                .title("test")
-                .estimatedMinutes(30)
-                .requiredEnergy(EnergyLevel.LOW)
-                .deadline(deadline)
-                .importance(3)
-                .category("DEV")
-                .build();
-        task.snooze();
-        task.snooze(); // delayCount becomes 2
+    private DefaultDynamicPriorityStrategy strategy;
+    private final User user = User.builder().email("test@sigma.com").nickname("test").build();
 
-        UserProfile profile = new UserProfile(1L, 2.0, 100.0, 1.5); // W1=2.0, W2=100.0, W3=1.5
-
-        // Expected Score Calculation:
-        // dt = 60
-        // score = (3 * 2.0) + (100.0 / (60 + 10.0)) - (2 * 1.5)
-        //       = 6.0 + (100.0 / 70.0) - 3.0
-        //       = 4.428571428571429
-        double expectedScore = (3 * 2.0) + (100.0 / (60.0 + 10.0)) - (2 * 1.5);
-
-        // When
-        double actualScore = strategy.calculate(task, profile);
-
-        // Then
-        assertEquals(expectedScore, actualScore, 0.0001);
+    @BeforeEach
+    void setUp() {
+        Clock fixed = Clock.fixed(NOW.atZone(ZoneId.systemDefault()).toInstant(), ZoneId.systemDefault());
+        strategy = new DefaultDynamicPriorityStrategy(new UrgencyEvaluator(fixed));
     }
 
-    @Test
-    @DisplayName("Overdue 케이스 - 마감이 30분 지난 경우 안전하게 dt를 0으로 보정하여 계산한다")
-    void calculate_OverdueCase_30MinutesOverdue() {
-        // Given
-        LocalDateTime deadline = LocalDateTime.now().minusMinutes(30);
-        User user = User.builder().email("test@sigma.com").nickname("test").build();
-        Task task = Task.builder()
-                .user(user)
-                .title("test")
-                .estimatedMinutes(30)
-                .requiredEnergy(EnergyLevel.LOW)
-                .deadline(deadline)
-                .importance(3)
-                .category("DEV")
-                .build();
-        task.snooze();
-        task.snooze(); // delayCount = 2
-
-        UserProfile profile = new UserProfile(1L, 2.0, 100.0, 1.5); // W1=2.0, W2=100.0, W3=1.5
-
-        // Expected Score Calculation:
-        // dt < 0 이므로 safeDt = 0.0
-        // score = (3 * 2.0) + (100.0 / (0 + 10.0)) - (2 * 1.5)
-        //       = 6.0 + 10.0 - 3.0
-        //       = 13.0
-        double expectedScore = (3 * 2.0) + (100.0 / (0.0 + 10.0)) - (2 * 1.5);
-
-        // When
-        double actualScore = strategy.calculate(task, profile);
-
-        // Then
-        assertEquals(expectedScore, actualScore, 0.0001);
-    }
-
-    @Test
-    @DisplayName("DelayCount가 높은 경우 - 마이너스 점수가 나오는 상황에서 하한선 0.0이 적용된다")
-    void calculate_HighDelayCount_ShouldClampToZero() {
-        // Given
-        LocalDateTime deadline = LocalDateTime.now().plusMinutes(60).plusSeconds(5);
-        User user = User.builder().email("test@sigma.com").nickname("test").build();
-        Task task = Task.builder()
-                .user(user)
-                .title("test")
-                .estimatedMinutes(30)
-                .requiredEnergy(EnergyLevel.LOW)
-                .deadline(deadline)
-                .importance(1)
-                .category("DEV")
-                .build();
-        for (int i = 0; i < 50; i++) {
-            task.snooze();
+    private Task task(int importance, LocalDateTime deadline, int delayCount) {
+        Task t = Task.builder()
+                .user(user).title("t").estimatedMinutes(30).requiredEnergy(EnergyLevel.LOW)
+                .deadline(deadline).importance(importance).category("DEV").build();
+        for (int i = 0; i < delayCount; i++) {
+            t.snooze();
         }
+        return t;
+    }
 
-        UserProfile profile = new UserProfile(1L, 1.0, 10.0, 2.0); // W1=1.0, W2=10.0, W3=2.0
+    @Test
+    @DisplayName("정규화: 마감 60분·중요도 3·연기 2 (W=0.5/0.3/0.2) → 0.42")
+    void normalized() {
+        double score = strategy.calculate(task(3, NOW.plusMinutes(60), 2), new UserProfile(1L, 0.5, 0.3, 0.2));
+        assertEquals(0.42, score, 0.0001);
+    }
 
-        // When
-        double actualScore = strategy.calculate(task, profile);
+    @Test
+    @DisplayName("Overdue - 마감 경과는 긴급도 최대(1.0) → 0.52")
+    void overdueMaxUrgency() {
+        double score = strategy.calculate(task(3, NOW.minusMinutes(30), 2), new UserProfile(1L, 0.5, 0.3, 0.2));
+        assertEquals(0.52, score, 0.0001);
+    }
 
-        // Then
-        assertEquals(0.0, actualScore, 0.0001);
+    @Test
+    @DisplayName("지연 페널티가 커서 음수면 하한선 0.0")
+    void clampsToZero() {
+        double score = strategy.calculate(task(1, NOW.plusMinutes(300), 50), new UserProfile(1L, 0.5, 0.3, 0.2));
+        assertEquals(0.0, score, 0.0001);
+    }
+
+    @Test
+    @DisplayName("마감 null이어도 NPE 없이 긴급도 0 → 0.4")
+    void nullDeadlineSafe() {
+        double score = strategy.calculate(task(4, null, 0), new UserProfile(1L, 0.5, 0.3, 0.2));
+        assertEquals(0.4, score, 0.0001);
+    }
+
+    @Test
+    @DisplayName("핵심 개선 - 긴급도가 중요도와 경쟁(임박 저중요 > 먼 고중요)")
+    void urgencyCompetes() {
+        UserProfile urgencyDriven = new UserProfile(1L, 0.2, 0.7, 0.1);
+        double imminentLow = strategy.calculate(task(2, NOW.plusMinutes(10), 0), urgencyDriven);
+        double farHigh = strategy.calculate(task(4, NOW.plusMinutes(2000), 0), urgencyDriven);
+        assertTrue(imminentLow > farHigh);
     }
 }

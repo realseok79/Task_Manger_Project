@@ -19,6 +19,11 @@ public class ExplorationService {
 
     private static final Logger log = LoggerFactory.getLogger(ExplorationService.class);
 
+    static final double EXPLORATION_PROBABILITY = 0.05;
+    static final int LOOKBACK_DAYS = 30;
+    static final double BOOST_FACTOR = 1.5;
+    static final double MIN_BASE_SCORE = 1.0;
+
     private final UserActivityLogRepository userActivityLogRepository;
     private Random random = new Random();
 
@@ -36,66 +41,77 @@ public class ExplorationService {
             return tasks;
         }
 
-        // 5% 확률로 탐색 모드 활성화
-        if (random.nextDouble() < 0.05) {
-            log.info("Exploration Mode activated for user: {}", userId);
+        // 확률 미통과 → 탐색 없음
+        if (random.nextDouble() >= EXPLORATION_PROBABILITY) {
+            clearFlags(tasks);
+            return tasks;
+        }
 
-            // 최근 30일간의 로그 조회
-            LocalDateTime thirtyDaysAgo = LocalDateTime.now().minusDays(30);
-            List<UserActivityLog> completedLogs = userActivityLogRepository
-                    .findByUserIdAndLoggedAtAfterAndActionType(userId, thirtyDaysAgo, ActionType.COMPLETED);
+        // 바운드: 긴급(RED) 작업이 있으면 탐색으로 가리지 않는다("바쁜 날엔 우회 금지").
+        boolean hasUrgent = tasks.stream().anyMatch(t -> UrgencyEvaluator.RED.equals(t.getUrgencyLevel()));
+        if (hasUrgent) {
+            log.info("Exploration skipped for user {}: urgent(RED) task present.", userId);
+            clearFlags(tasks);
+            return tasks;
+        }
 
-            // 카테고리별 COMPLETED 카운트 집계
-            Map<String, Long> categoryCounts = completedLogs.stream()
-                    .collect(Collectors.groupingBy(UserActivityLog::getCategory, Collectors.counting()));
+        log.info("Exploration Mode activated for user: {}", userId);
 
-            // 후보 작업들의 카테고리 추출
-            Set<String> candidateCategories = tasks.stream()
-                    .map(TaskResponse::getCategory)
-                    .collect(Collectors.toSet());
+        // 최근 LOOKBACK_DAYS일간의 완료 로그 조회
+        LocalDateTime since = LocalDateTime.now().minusDays(LOOKBACK_DAYS);
+        List<UserActivityLog> completedLogs = userActivityLogRepository
+                .findByUserIdAndLoggedAtAfterAndActionType(userId, since, ActionType.COMPLETED);
 
-            // 후보 카테고리 중 최근 30일간 완료 건수가 최소인 카테고리 선택
-            String targetCategory = candidateCategories.stream()
-                    .min((cat1, cat2) -> {
-                        long count1 = categoryCounts.getOrDefault(cat1, 0L);
-                        long count2 = categoryCounts.getOrDefault(cat2, 0L);
-                        return Long.compare(count1, count2);
-                    })
+        if (completedLogs.isEmpty()) {
+            log.info("No completed logs in the last {} days for user {}. Aborting exploration mode.", LOOKBACK_DAYS, userId);
+            clearFlags(tasks);
+            return tasks;
+        }
+
+        // 카테고리별 COMPLETED 카운트
+        Map<String, Long> categoryCounts = completedLogs.stream()
+                .collect(Collectors.groupingBy(UserActivityLog::getCategory, Collectors.counting()));
+
+        // 후보 카테고리 중 최근 완료 건수가 최소인 카테고리 선택
+        Set<String> candidateCategories = tasks.stream()
+                .map(TaskResponse::getCategory)
+                .collect(Collectors.toSet());
+        String targetCategory = candidateCategories.stream()
+                .min((c1, c2) -> Long.compare(
+                        categoryCounts.getOrDefault(c1, 0L),
+                        categoryCounts.getOrDefault(c2, 0L)))
+                .orElse(null);
+
+        if (targetCategory != null) {
+            TaskResponse pick = tasks.stream()
+                    .filter(t -> targetCategory.equals(t.getCategory()))
+                    .findFirst()
                     .orElse(null);
 
-            if (targetCategory != null) {
-                // 해당 카테고리에 속하는 작업 중 1개 선택
-                TaskResponse explorationTask = tasks.stream()
-                        .filter(t -> targetCategory.equals(t.getCategory()))
-                        .findFirst()
-                        .orElse(null);
+            if (pick != null) {
+                double maxScore = tasks.stream().mapToDouble(TaskResponse::getScore).max().orElse(0.0);
+                double tempScore = Math.round(Math.max(maxScore, MIN_BASE_SCORE) * BOOST_FACTOR * 100.0) / 100.0;
+                pick.setScore(tempScore);
+                pick.setExploration(true);
 
-                if (explorationTask != null) {
-                    // 리스트 최고점 찾기
-                    double maxScore = tasks.stream()
-                            .mapToDouble(TaskResponse::getScore)
-                            .max()
-                            .orElse(0.0);
+                long completedInCategory = categoryCounts.getOrDefault(targetCategory, 0L);
+                pick.setReason(String.format(
+                        "최근 %d일 완료가 가장 적은 '%s' 카테고리 (완료 %d건) — 탐색 추천",
+                        LOOKBACK_DAYS, targetCategory, completedInCategory));
 
-                    // 임시 score 설정 (최고점 * 1.5, 최고점이 0일 경우 1.0 기준으로 1.5배 보장)
-                    double tempScore = Math.max(maxScore, 1.0) * 1.5;
-                    explorationTask.setScore(tempScore);
-                    explorationTask.setExploration(true);
+                log.info("Selected task {} from category '{}' for exploration. Temporary score set to {}",
+                        pick.getTaskId(), targetCategory, tempScore);
 
-                    log.info("Selected task {} from category '{}' for exploration. Temporary score set to {}",
-                            explorationTask.getTaskId(), targetCategory, tempScore);
-
-                    // 탐색 모드 대상을 최상단에 올리기 위해 재정렬
-                    tasks.sort((t1, t2) -> Double.compare(t2.getScore(), t1.getScore()));
-                }
-            }
-        } else {
-            // 활성화되지 않은 경우 모든 작업의 isExploration 플래그를 false로 설정
-            for (TaskResponse task : tasks) {
-                task.setExploration(false);
+                tasks.sort((t1, t2) -> Double.compare(t2.getScore(), t1.getScore()));
             }
         }
 
         return tasks;
+    }
+
+    private static void clearFlags(List<TaskResponse> tasks) {
+        for (TaskResponse task : tasks) {
+            task.setExploration(false);
+        }
     }
 }

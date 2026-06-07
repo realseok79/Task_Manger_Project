@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +44,8 @@ class PriorityServiceTest {
 
         ExplorationService explorationService = new ExplorationService(userActivityLogRepository);
         explorationService.setRandom(mockRandom);
-        priorityService = new PriorityService(priorityStrategy, userProfileRepository, explorationService);
+        TaskResponseMapper taskResponseMapper = new TaskResponseMapper(new UrgencyEvaluator(Clock.systemDefaultZone()));
+        priorityService = new PriorityService(priorityStrategy, userProfileRepository, explorationService, taskResponseMapper);
         user = User.builder().email("jungwoo@sigma.com").nickname("박정우").build();
     }
 
@@ -64,7 +66,7 @@ class PriorityServiceTest {
                 .title("taskA")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusMinutes(60))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DEV")
                 .build();
@@ -73,7 +75,7 @@ class PriorityServiceTest {
                 .title("taskB")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusMinutes(60))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DOCS")
                 .build();
@@ -133,7 +135,7 @@ class PriorityServiceTest {
                 .title("taskA")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusMinutes(60))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DEV")
                 .build();
@@ -142,7 +144,7 @@ class PriorityServiceTest {
                 .title("taskB")
                 .estimatedMinutes(60)
                 .requiredEnergy(EnergyLevel.MEDIUM)
-                .deadline(now.plusMinutes(60))
+                .deadline(now.plusDays(10))
                 .importance(3)
                 .category("DOCS")
                 .build();
