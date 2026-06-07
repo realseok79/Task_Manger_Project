@@ -42,6 +42,10 @@ public record TaskCreateRequest(
         @Schema(description = "중요도(1~5)", example = "5", requiredMode = Schema.RequiredMode.REQUIRED)
         @Min(value = 1, message = "importance는 1 이상 5 이하의 정수여야 합니다.")
         @Max(value = 5, message = "importance는 1 이상 5 이하의 정수여야 합니다.")
-        int importance
+        int importance,
+
+        @Schema(description = "카테고리 (선택, 미입력 시 DEFAULT)", example = "업무")
+        @Size(max = 100, message = "카테고리는 100자를 초과할 수 없습니다.")
+        String category   // nullable, 선택 입력
 ) {
 }

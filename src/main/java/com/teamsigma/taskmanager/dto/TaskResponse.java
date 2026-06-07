@@ -1,5 +1,6 @@
 package com.teamsigma.taskmanager.dto;
 
+import com.teamsigma.taskmanager.domain.DeadlineStatus;
 import com.teamsigma.taskmanager.domain.EnergyLevel;
 import com.teamsigma.taskmanager.domain.Task;
 import com.teamsigma.taskmanager.domain.TaskStatus;
@@ -23,6 +24,8 @@ public record TaskResponse(
         @Schema(example = "5") int importance,
         @Schema(example = "PENDING") TaskStatus status,
         @Schema(example = "0") int delayCount,
+        @Schema(description = "카테고리", example = "DEFAULT") String category,
+        @Schema(description = "마감 임박도(배지/카운트다운 표현용)", example = "NORMAL") DeadlineStatus deadlineStatus,
         @Schema(example = "2026-05-18T09:00:00") LocalDateTime createdAt
 ) {
     public static TaskResponse from(Task task) {
@@ -36,6 +39,8 @@ public record TaskResponse(
                 task.getImportance(),
                 task.getStatus(),
                 task.getDelayCount(),
+                task.getCategory(),
+                task.getDeadlineStatus(),
                 task.getCreatedAt()
         );
     }

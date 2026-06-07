@@ -10,6 +10,8 @@ import com.teamsigma.taskmanager.repository.UserActivityLogRepository;
 import com.teamsigma.taskmanager.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
@@ -38,6 +40,7 @@ public class TaskService {
                 .deadline(request.deadline())
                 .requiredEnergy(request.requiredEnergy())
                 .importance(request.importance())
+                .category(request.category() != null ? request.category() : "DEFAULT")
                 .build();
         return taskRepository.save(task);
     }
@@ -87,6 +90,24 @@ public class TaskService {
         return taskRepository.findAvailableTasksWithHardConstraint(userId, currentEnergy, availableMinutes);
     }
 
+    /** 단건 조회. 없으면 404(TaskNotFoundException). */
+    @Transactional(readOnly = true)
+    public Task getTask(Long taskId) {
+        return findTaskOrThrow(taskId);
+    }
+
+    /** 우선순위 정렬용: 유저의 미완료(PENDING/SNOOZED) 태스크 목록. */
+    @Transactional(readOnly = true)
+    public List<Task> getActiveTasks(Long userId) {
+        return taskRepository.findByUserIdAndStatusIn(userId, List.of(TaskStatus.PENDING, TaskStatus.SNOOZED));
+    }
+
+    /** 완료 기록 조회: COMPLETED 상태만, 완료(갱신) 시각 역순. */
+    @Transactional(readOnly = true)
+    public List<Task> getCompletedTasks(Long userId) {
+        return taskRepository.findByUserIdAndStatusOrderByUpdatedAtDesc(userId, TaskStatus.COMPLETED);
+    }
+
     @Transactional(readOnly = true)
     public List<Task> getZombieTasks(Long userId) {
         return taskRepository.findZombieTasksByUserId(userId);
@@ -96,6 +117,12 @@ public class TaskService {
     @Transactional(readOnly = true)
     public List<UserActivityLog> getUserActivityLogs(Long userId) {
         return activityLogRepository.findByUserIdOrderByLoggedAtDesc(userId);
+    }
+
+    /** 유저 행동 로그를 최신순으로 페이지 조회(신규 페이징 엔드포인트용). */
+    @Transactional(readOnly = true)
+    public Page<UserActivityLog> getUserActivityLogs(Long userId, Pageable pageable) {
+        return activityLogRepository.findByUserIdOrderByLoggedAtDesc(userId, pageable);
     }
 
     public double getCompletionRate(Long userId) {

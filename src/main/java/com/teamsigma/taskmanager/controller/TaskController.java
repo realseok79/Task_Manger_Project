@@ -3,6 +3,8 @@ package com.teamsigma.taskmanager.controller;
 import com.teamsigma.taskmanager.domain.EnergyLevel;
 import com.teamsigma.taskmanager.domain.Task;
 import com.teamsigma.taskmanager.dto.*;
+import com.teamsigma.taskmanager.priority.PriorityService;
+import com.teamsigma.taskmanager.priority.ScoredTaskResponse;
 import com.teamsigma.taskmanager.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -13,8 +15,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -30,19 +34,38 @@ import java.util.List;
 public class TaskController {
 
     private final TaskService taskService;
+    private final PriorityService priorityService;
 
     // ① POST /api/tasks — Task 생성 (정량 스키마 필수 입력)
-    @Operation(summary = "Task 생성", description = "예상 소요시간/마감/요구 에너지/중요도를 필수로 받아 Task를 생성한다.")
+    @Operation(summary = "Task 생성", description = "예상 소요시간/마감/요구 에너지/중요도를 필수로 받아 Task를 생성한다. 생성 리소스 위치를 Location 헤더로 반환한다.")
     @ApiResponses({
-            @ApiResponse(responseCode = "201", description = "생성 성공",
+            @ApiResponse(responseCode = "201", description = "생성 성공(Location 헤더 포함)",
                     content = @Content(schema = @Schema(implementation = TaskResponse.class))),
             @ApiResponse(responseCode = "400", description = "검증 실패(예: importance 범위 초과, 존재하지 않는 userId)",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping
-    @ResponseStatus(HttpStatus.CREATED)
-    public TaskResponse create(@Valid @RequestBody TaskCreateRequest request) {
-        return TaskResponse.from(taskService.createTask(request));
+    public ResponseEntity<TaskResponse> create(@Valid @RequestBody TaskCreateRequest request) {
+        Task created = taskService.createTask(request);
+        URI location = ServletUriComponentsBuilder.fromCurrentRequest()
+                .path("/{id}")
+                .buildAndExpand(created.getId())
+                .toUri();
+        return ResponseEntity.created(location).body(TaskResponse.from(created));
+    }
+
+    // ①-2 GET /api/tasks/{taskId} — 단건 조회
+    @Operation(summary = "Task 단건 조회", description = "taskId로 단건을 조회한다. 존재하지 않으면 404.")
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "조회 성공",
+                    content = @Content(schema = @Schema(implementation = TaskResponse.class))),
+            @ApiResponse(responseCode = "404", description = "존재하지 않는 Task",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @GetMapping("/{taskId}")
+    public TaskResponse getOne(
+            @Parameter(description = "대상 Task ID", example = "101") @PathVariable Long taskId) {
+        return TaskResponse.from(taskService.getTask(taskId));
     }
 
     // ② GET /api/tasks?userId=&energy=&minutes= — 하드 컨스트레인트 필터링 조회
@@ -89,5 +112,30 @@ public class TaskController {
             @Parameter(description = "유저 ID", example = "1") @RequestParam Long userId) {
         List<Task> zombies = taskService.getZombieTasks(userId);
         return ZombieTaskResponse.from(zombies);
+    }
+
+    // ⑤ GET /api/tasks/completed?userId= — 완료 기록 조회
+    @Operation(summary = "완료 기록 조회",
+            description = "userId의 COMPLETED 상태 Task를 완료(갱신) 시각 역순으로 반환한다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = CompletedTaskResponse.class)))
+    @GetMapping("/completed")
+    public List<CompletedTaskResponse> getCompleted(
+            @Parameter(description = "유저 ID", example = "1") @RequestParam Long userId) {
+        return taskService.getCompletedTasks(userId).stream()
+                .map(CompletedTaskResponse::from)
+                .toList();
+    }
+
+    // ⑥ GET /api/tasks/prioritized?userId= — 적응형 가중치 기반 우선순위 정렬 조회
+    @Operation(summary = "우선순위 정렬 Task 조회",
+            description = "userId의 미완료(PENDING/SNOOZED) Task를 PriorityService(AdaptiveWeightEngine 연동) 점수 기준으로 정렬해 반환한다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = ScoredTaskResponse.class)))
+    @GetMapping("/prioritized")
+    public List<ScoredTaskResponse> getPrioritized(
+            @Parameter(description = "유저 ID", example = "1") @RequestParam Long userId) {
+        List<Task> tasks = taskService.getActiveTasks(userId);
+        return priorityService.getPrioritizedTasks(userId, tasks);
     }
 }
