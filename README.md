@@ -34,6 +34,9 @@ SPRING_PROFILES_ACTIVE=prod DB_URL=... DB_USERNAME=... DB_PASSWORD=... ./gradlew
 > **프로파일 분리**: 기본 활성 프로파일은 `dev`(H2)입니다. 운영 배포 시 `SPRING_PROFILES_ACTIVE=prod`로 덮어써야 하며,
 > 더미 시더는 `@Profile("dev")` + `app.seed.enabled=true` 이중 조건으로만 동작하므로 운영 DB는 절대 오염되지 않습니다.
 
+### ⚙️ 환경 설정
+- **CORS 허용 origin**: `app.cors.allowed-origins` (기본값 `http://localhost:5173`). 운영에서는 환경변수 `APP_CORS_ALLOWED_ORIGINS`(콤마 구분 목록)로 override 합니다.
+
 ### 📌 도메인 용어 정리 (브리프 ↔ 구현)
 - 브리프의 `status = ACTIVE`는 본 코드베이스의 **`PENDING`** 과 동일 의미입니다(미완료/조회 대상). 코드는 일관되게 `PENDING`을 사용합니다.
 - 상태 변경 액션의 `IGNORED`(방치)는 도메인의 **`ARCHIVED`** 로 일원화했습니다(`TaskStatus`에 별도 `IGNORED`를 추가하지 않음).
