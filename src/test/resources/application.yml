@@ -17,3 +17,6 @@ spring:
 app:
   seed:
     enabled: false               # 테스트에서는 시더 비활성 (테스트가 직접 데이터를 구성)
+  scheduler:
+    # "-" = Scheduled.CRON_DISABLED. 테스트 중 스케줄러가 자정에 자동 실행되어 CI 를 방해하지 않도록 비활성화.
+    weight-update-cron: "-"

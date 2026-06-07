@@ -25,3 +25,8 @@ app:
   cors:
     # 프론트(Vite) 개발 서버 기본 origin. 운영에서는 환경변수 APP_CORS_ALLOWED_ORIGINS 로 override.
     allowed-origins: http://localhost:5173
+  scheduler:
+    # 가중치 갱신 스케줄러 주기(cron). 기본: 매일 자정.
+    # 환경변수 APP_SCHEDULER_WEIGHT_UPDATE_CRON 로 override 가능하며, "-" 로 설정하면 비활성화된다.
+    #   운영: "0 0 0 * * ?" (매일 자정) / 스테이징: "0 */10 * * * ?" (10분마다) / 테스트: "-" (비활성화)
+    weight-update-cron: "0 0 0 * * ?"
