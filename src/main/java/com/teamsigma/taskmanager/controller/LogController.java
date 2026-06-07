@@ -1,5 +1,6 @@
 package com.teamsigma.taskmanager.controller;
 
+import com.teamsigma.taskmanager.dto.PagedResponse;
 import com.teamsigma.taskmanager.dto.UserActivityLogResponse;
 import com.teamsigma.taskmanager.service.TaskService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,6 +10,8 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
@@ -35,5 +38,19 @@ public class LogController {
         return taskService.getUserActivityLogs(userId).stream()
                 .map(UserActivityLogResponse::from)
                 .toList();
+    }
+
+    // ⑤-2 GET /api/logs/user/{userId}/paged — 페이지네이션 조회 (기존 배열 엔드포인트는 하위 호환 유지)
+    @Operation(summary = "유저 행동 로그 페이지 조회",
+            description = "행동 로그를 최신순으로 페이지네이션하여 반환한다. content + 페이지 메타(page/size/totalElements/totalPages) 포함.")
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = PagedResponse.class)))
+    @GetMapping("/user/{userId}/paged")
+    public PagedResponse<UserActivityLogResponse> getUserLogsPaged(
+            @Parameter(description = "유저 ID", example = "1") @PathVariable Long userId,
+            @Parameter(description = "페이지 번호(0-base)", example = "0") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "페이지 크기", example = "20") @RequestParam(defaultValue = "20") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        return PagedResponse.of(taskService.getUserActivityLogs(userId, pageable), UserActivityLogResponse::from);
     }
 }
