@@ -1,6 +1,7 @@
 package com.teamsigma.taskmanager.dto;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.Clock;
 import java.time.LocalDateTime;
 
 /**
@@ -18,8 +19,11 @@ public record ErrorResponse(
         @Schema(description = "에러 발생 시각", example = "2026-05-18T12:00:00")
         LocalDateTime timestamp
 ) {
-    /** 호출부에서 timestamp 를 매번 채우지 않도록 하는 팩토리 (now() 누락 실수 방지). */
-    public static ErrorResponse of(int status, String error, String message) {
-        return new ErrorResponse(status, error, message, LocalDateTime.now());
+    /**
+     * 팩토리. timestamp 는 주입된 Clock 으로 생성한다(LocalDateTime.now() 직접 호출 금지).
+     * 테스트에서 고정 Clock 으로 교체하면 timestamp 검증이 가능해진다.
+     */
+    public static ErrorResponse of(int status, String error, String message, Clock clock) {
+        return new ErrorResponse(status, error, message, LocalDateTime.now(clock));
     }
 }

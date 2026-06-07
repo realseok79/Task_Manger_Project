@@ -1,6 +1,7 @@
 package com.teamsigma.taskmanager.exception;
 
 import com.teamsigma.taskmanager.dto.ErrorResponse;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,15 +10,22 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.time.Clock;
+
 /**
  * 전역 예외 처리기.
  *
  * 왜 한 곳에 모으나: 컨트롤러마다 try/catch 를 흩뿌리면 에러 응답 포맷이 제각각이 된다.
  * 여기서 예외 → HTTP 상태 + 통일된 ErrorResponse 매핑을 단일 책임으로 관리한다.
+ *
+ * timestamp 는 주입된 Clock 으로 생성한다(테스트에서 고정 Clock 으로 교체 가능).
  */
 @Slf4j
+@RequiredArgsConstructor
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private final Clock clock;
 
     /** 리소스 없음 → 404. */
     @ExceptionHandler(TaskNotFoundException.class)
@@ -44,6 +52,13 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_REQUEST, e.getMessage());
     }
 
+    /** 허용되지 않는 상태 전이(예: 완료된 Task를 다시 완료) → 409 Conflict. */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponse> handleIllegalState(IllegalStateException e) {
+        log.warn("[409] {}", e.getMessage());
+        return build(HttpStatus.CONFLICT, e.getMessage());
+    }
+
     /** 예상치 못한 예외 → 500. 내부 메시지를 그대로 노출하지 않고 스택만 서버 로그에 남긴다(정보 노출 방지). */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleUnexpected(Exception e) {
@@ -54,6 +69,6 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message) {
         // status.name() 으로 "BAD_REQUEST" 같은 enum 명칭을 그대로 error 필드에 채워 포맷을 통일.
         return ResponseEntity.status(status)
-                .body(ErrorResponse.of(status.value(), status.name(), message));
+                .body(ErrorResponse.of(status.value(), status.name(), message, clock));
     }
 }

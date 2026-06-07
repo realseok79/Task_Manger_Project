@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -17,7 +19,10 @@ public class TaskActivityListener {
     private final UserActivityLogRepository activityLogRepository;
 
     // 전용 풀(activityLogExecutor)에서 실행: 로그 적재가 메인 응답 스레드를 점유하지 않게 격리한다.
+    // 비동기(@Async) + AFTER_COMMIT 시점이라 원 트랜잭션은 이미 종료된 상태이므로,
+    // REQUIRES_NEW 로 독립 트랜잭션 경계를 명시해 비동기 컨텍스트에서도 적재가 커밋되도록 보장한다.
     @Async("activityLogExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void handleTaskAction(TaskActionEvent event) {
         try {
