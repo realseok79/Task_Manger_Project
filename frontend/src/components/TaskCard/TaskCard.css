@@ -117,6 +117,17 @@
 }
 .task-card__avatar:first-child { margin-left: 0; }
 
+/* Out-of-context (doesn't fit current energy/time) — de-emphasised, not hidden */
+.task-card--dimmed {
+  opacity: 0.55;
+  border-left-color: var(--color-border-strong);
+}
+.task-card--dimmed:hover { opacity: 0.85; }
+.task-card__dim-note {
+  font-size: var(--fs-xs);
+  color: var(--color-text-disabled);
+}
+
 /* Completed row specifics */
 .task-card--completed .task-card__title { flex: 1; }
 .task-card__completed-time {

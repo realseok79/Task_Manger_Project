@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { History } from 'lucide-react';
-import AIInsightsBanner from '../components/AIInsightsBanner/AIInsightsBanner';
+import SummaryBar from '../components/SummaryBar/SummaryBar';
 import FilterTabs from '../components/FilterTabs/FilterTabs';
 import TaskCard from '../components/TaskCard/TaskCard';
 import { getCompletedTasks } from '../api/tasks';
@@ -61,6 +61,15 @@ export default function HistoryPage() {
     return [...map.entries()].sort((a, b) => dateOf(b[0]) - dateOf(a[0]));
   }, [filtered]);
 
+  // Factual count: tasks completed within the last 7 days (relative to refDate).
+  const weekCount = useMemo(
+    () => items.filter((i) => {
+      const diff = Math.round((refDate - dateOf(i.date)) / 86400000);
+      return diff >= 0 && diff < 7;
+    }).length,
+    [items, refDate]
+  );
+
   const groupLabel = (dateStr) => {
     const diff = Math.round((refDate - dateOf(dateStr)) / 86400000);
     const pretty = dateOf(dateStr).toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric' });
@@ -75,11 +84,9 @@ export default function HistoryPage() {
         <h1 className="page-title"><History size={26} aria-hidden="true" /> 완료된 작업</h1>
       </header>
 
-      <AIInsightsBanner
-        message="이번 주에 12개의 작업을 완료했어요. 화요일에 생산성이 가장 높았습니다."
-        ctaLabel="인사이트 보기"
-        onCta={() => {}}
-      />
+      {!isLoading && weekCount > 0 && (
+        <SummaryBar message={`이번 주에 ${weekCount}개의 작업을 완료했습니다.`} />
+      )}
 
       <FilterTabs tabs={TABS} activeTab={activeTab} onChange={setActiveTab} />
 
@@ -89,8 +96,7 @@ export default function HistoryPage() {
         </div>
       ) : groups.length === 0 ? (
         <div className="empty-state">
-          <span className="empty-state__emoji" aria-hidden="true">🗂️</span>
-          <p className="empty-state__text">해당 기간에 완료된 작업이 없어요.</p>
+          <p className="empty-state__text">해당 기간에 완료된 작업이 없습니다.</p>
         </div>
       ) : (
         groups.map(([date, rows]) => (

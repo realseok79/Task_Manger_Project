@@ -4,7 +4,7 @@ import Sidebar from './components/Sidebar/Sidebar';
 import TopBar from './components/TopBar/TopBar';
 import TodayTasksPage from './pages/TodayTasksPage';
 import HistoryPage from './pages/HistoryPage';
-import DashboardVariantPage from './pages/DashboardVariantPage';
+import ImportantTasksPage from './pages/ImportantTasksPage';
 
 /**
  * App shell — sidebar + topbar + routed page area.
@@ -14,6 +14,7 @@ export default function App() {
   const [page, setPage] = useState('today'); // 'today' | 'important' | 'history'
   const [isDark, setIsDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [composeSignal, setComposeSignal] = useState(0); // bump => focus the Today composer
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
@@ -24,12 +25,18 @@ export default function App() {
     setDrawerOpen(false);
   };
 
+  // Sidebar "새 작업 추가": land on Today and focus the composer input.
+  const requestCompose = () => {
+    navigate('today');
+    setComposeSignal((n) => n + 1);
+  };
+
   return (
     <div className="app-container">
       <Sidebar
         activeItem={page}
         onNavigate={navigate}
-        onAddTask={() => navigate('today')}
+        onAddTask={requestCompose}
         isOpen={drawerOpen}
       />
 
@@ -53,9 +60,9 @@ export default function App() {
               exit={{ opacity: 0, y: -8 }}
               transition={{ duration: 0.2 }}
             >
-              {page === 'today' && <TodayTasksPage />}
+              {page === 'today' && <TodayTasksPage composeSignal={composeSignal} />}
               {page === 'history' && <HistoryPage />}
-              {page === 'important' && <DashboardVariantPage />}
+              {page === 'important' && <ImportantTasksPage />}
             </motion.div>
           </AnimatePresence>
         </div>

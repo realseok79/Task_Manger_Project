@@ -88,14 +88,6 @@
   to { transform: scale(2.4); opacity: 0; }
 }
 
-/* ---- Rotating star (AI Insights banner) -------------------------------- */
-@keyframes slow-spin {
-  to { transform: rotate(360deg); }
-}
-.anim-slow-spin {
-  animation: slow-spin 6s linear infinite;
-}
-
 /* ---- Modal warning icon bounce ----------------------------------------- */
 @keyframes icon-bounce {
   0%   { transform: scale(0.6); opacity: 0; }

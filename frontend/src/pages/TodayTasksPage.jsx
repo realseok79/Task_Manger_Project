@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowUpDown, LayoutGrid, Lightbulb, MoreHorizontal, Plus, CornerDownLeft } from 'lucide-react';
 import TaskCard from '../components/TaskCard/TaskCard';
@@ -11,6 +11,20 @@ import { listContainerVariants, listItemVariants } from '../hooks/useAnimations'
 import './TodayTasksPage.css';
 
 const TODAY = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
+const ENERGY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+const CATEGORIES = ['업무', '개인', '디자인', '문서', '회의', '개발', '인사'];
+const COMPOSER_ENERGY = [
+  { id: 'LOW', label: '낮음' },
+  { id: 'MEDIUM', label: '보통' },
+  { id: 'HIGH', label: '높음' },
+];
+const IMPORTANCE = [
+  { value: 5, label: '매우 높음' },
+  { value: 4, label: '높음' },
+  { value: 3, label: '보통' },
+  { value: 2, label: '낮음' },
+  { value: 1, label: '매우 낮음' },
+];
 
 /** Derive expected priority from energy + available time (per spec). */
 function computePriority(energy, time) {
@@ -21,26 +35,63 @@ function computePriority(energy, time) {
   return 'Low';
 }
 
-export default function TodayTasksPage() {
+export default function TodayTasksPage({ composeSignal = 0 }) {
   const [timeAvailable, setTimeAvailable] = useState(4.5);
   const [energyLevel, setEnergyLevel] = useState('MEDIUM');
   const [quickInput, setQuickInput] = useState('');
   const [zombieTask, setZombieTask] = useState(null);
 
+  // Composer fields (capture the model the adaptive engine actually needs).
+  const [newCategory, setNewCategory] = useState('업무');
+  const [newEnergy, setNewEnergy] = useState('MEDIUM');
+  const [newImportance, setNewImportance] = useState(3);
+  const [newDeadline, setNewDeadline] = useState('');
+
+  const titleRef = useRef(null);
+
   const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, addTask } = useTasks(energyLevel, timeAvailable);
-  const timer = useTimer(2712, true); // 00:45:12
+  const timer = useTimer(0, false); // idle until the user starts focusing
 
   const views = useMemo(() => tasks.map(toViewModel), [tasks]);
   const priorityTask = views.find((t) => t.isPriority && !t.isZombie);
-  const pending = views.filter((t) => !t.isPriority || t.isZombie);
   const expectedPriority = computePriority(energyLevel, timeAvailable);
+
+  // The ContextBar drives the list: tasks that fit the current energy/time float
+  // up (zombies pinned on top); the rest are de-emphasised, not hidden.
+  const minutes = timeAvailable * 60;
+  const pending = useMemo(
+    () =>
+      views
+        .filter((t) => !t.isPriority || t.isZombie)
+        .map((t) => ({
+          ...t,
+          fits: ENERGY_RANK[t.requiredEnergy] <= ENERGY_RANK[energyLevel] && t.estimatedMinutes <= minutes,
+        }))
+        .sort((a, b) => Number(b.isZombie) - Number(a.isZombie) || Number(b.fits) - Number(a.fits)),
+    [views, energyLevel, minutes]
+  );
+
+  // Focus the composer when the sidebar "새 작업 추가" is pressed.
+  useEffect(() => {
+    if (!composeSignal) return;
+    titleRef.current?.focus();
+    titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [composeSignal]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const title = quickInput.trim();
     if (!title) return;
-    addTask({ title, estimatedMinutes: 30, requiredEnergy: energyLevel, importance: 3 });
+    addTask({
+      title,
+      estimatedMinutes: 30,
+      requiredEnergy: newEnergy,
+      importance: Number(newImportance),
+      category: newCategory,
+      deadline: newDeadline ? new Date(`${newDeadline}T09:00:00`).toISOString() : undefined,
+    });
     setQuickInput('');
+    setNewDeadline('');
   };
 
   const onCardClick = (t) => {
@@ -51,7 +102,7 @@ export default function TodayTasksPage() {
     <div className="today-page">
       <header className="page-header anim-title-in">
         <div>
-          <h1 className="page-title">☀️ 오늘의 작업</h1>
+          <h1 className="page-title">오늘의 작업</h1>
           <p className="page-subtitle mono">{TODAY}</p>
         </div>
         <div className="page-header__actions">
@@ -67,7 +118,7 @@ export default function TodayTasksPage() {
       {/* Priority task */}
       {priorityTask && (
         <section className="priority-block anim-section-in" aria-label="최우선 과제">
-          <span className="priority-block__label">🔥 최우선 과제</span>
+          <span className="priority-block__label">최우선 과제</span>
           <TaskCard
             variant="priority"
             title={priorityTask.title}
@@ -104,6 +155,7 @@ export default function TodayTasksPage() {
                   scheduledTime={t.scheduledTime}
                   delayedFrom={t.delayedFrom}
                   delayCount={t.delayCount}
+                  dimmed={!t.fits && !t.isZombie}
                   onComplete={() => completeTask(t.id)}
                   onClick={t.isZombie ? () => onCardClick(t) : undefined}
                 />
@@ -123,19 +175,47 @@ export default function TodayTasksPage() {
         }}
       />
 
-      {/* Quick add */}
-      <form className="quick-add" onSubmit={handleSubmit}>
-        <Plus size={18} className="quick-add__icon" aria-hidden="true" />
-        <input
-          className="quick-add__input"
-          placeholder="작업 추가..."
-          aria-label="새 작업 빠른 추가"
-          value={quickInput}
-          onChange={(e) => setQuickInput(e.target.value)}
-        />
-        <button type="submit" className="btn-primary quick-add__btn">
-          추가 <CornerDownLeft size={15} />
-        </button>
+      {/* Composer */}
+      <form className="composer" onSubmit={handleSubmit}>
+        <div className="quick-add">
+          <Plus size={18} className="quick-add__icon" aria-hidden="true" />
+          <input
+            ref={titleRef}
+            className="quick-add__input"
+            placeholder="작업 추가..."
+            aria-label="새 작업 제목"
+            value={quickInput}
+            onChange={(e) => setQuickInput(e.target.value)}
+          />
+          <button type="submit" className="btn-primary quick-add__btn">
+            추가 <CornerDownLeft size={15} />
+          </button>
+        </div>
+
+        <div className="composer__options">
+          <label className="composer__field">
+            <span>에너지</span>
+            <select value={newEnergy} onChange={(e) => setNewEnergy(e.target.value)}>
+              {COMPOSER_ENERGY.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          </label>
+          <label className="composer__field">
+            <span>카테고리</span>
+            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className="composer__field">
+            <span>중요도</span>
+            <select value={newImportance} onChange={(e) => setNewImportance(e.target.value)}>
+              {IMPORTANCE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+          </label>
+          <label className="composer__field">
+            <span>마감</span>
+            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
+          </label>
+        </div>
       </form>
 
       <ZombieModal
@@ -159,8 +239,7 @@ export default function TodayTasksPage() {
 function EmptyState() {
   return (
     <div className="empty-state">
-      <span className="empty-state__emoji" aria-hidden="true">🎉</span>
-      <p className="empty-state__text">오늘 처리할 작업이 없어요. 멋진 하루예요!</p>
+      <p className="empty-state__text">오늘 남은 작업이 없습니다.</p>
     </div>
   );
 }

@@ -74,6 +74,33 @@ let TASKS = [
     createdAt: inDays(-2),
     category: '개인',
   },
+  {
+    taskId: 5,
+    title: '신규 채용 최종 면접 진행',
+    description: '백엔드 시니어 포지션 최종 후보 면접 및 평가표 작성.',
+    estimatedMinutes: 60,
+    deadline: inDays(1),
+    requiredEnergy: 'HIGH',
+    importance: 4,
+    status: 'PENDING',
+    delayCount: 0,
+    createdAt: inDays(-1),
+    category: '인사',
+    scheduledTime: '오전 11시',
+  },
+  {
+    taskId: 6,
+    title: '보안 패치 긴급 배포 검토',
+    description: '취약점 핫픽스 PR 리뷰 후 운영 배포 승인.',
+    estimatedMinutes: 45,
+    deadline: inDays(0),
+    requiredEnergy: 'MEDIUM',
+    importance: 5,
+    status: 'PENDING',
+    delayCount: 0,
+    createdAt: inDays(-1),
+    category: '개발',
+  },
 ];
 
 // Completed history view models (the live /api/logs endpoint omits titles, so

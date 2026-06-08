@@ -62,6 +62,13 @@
 .task-list,
 .skeleton-list { display: flex; flex-direction: column; gap: var(--space-3); }
 
+/* Composer: title row + options row */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 /* Quick add bar */
 .quick-add {
   display: flex;
@@ -84,6 +91,34 @@
 }
 .quick-add__btn { padding: 10px 20px; }
 
+.composer__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: 0 var(--space-2);
+}
+.composer__field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.04em;
+  color: var(--color-text-secondary);
+}
+.composer__field select,
+.composer__field input[type='date'] {
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-primary);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
 /* Empty state */
 .empty-state {
   display: flex;
@@ -93,5 +128,4 @@
   padding: var(--space-12) var(--space-6);
   text-align: center;
 }
-.empty-state__emoji { font-size: 2.5rem; }
 .empty-state__text { margin: 0; color: var(--color-text-secondary); }

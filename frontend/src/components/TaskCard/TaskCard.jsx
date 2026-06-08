@@ -22,6 +22,7 @@ function TaskCard({
   timeRange,
   isCritical = false,
   assignees = [],
+  dimmed = false,
   isTimerRunning = false,
   timerValue,
   onComplete,
@@ -30,6 +31,7 @@ function TaskCard({
   onResumeTimer,
   onStopTimer,
 }) {
+  const hasTimer = Boolean(onPauseTimer || onResumeTimer || onStopTimer);
   const resolved = delayCount >= 5 ? 'zombie' : variant;
   const truncated = title && title.length > 50 ? `${title.slice(0, 50)}…` : title;
 
@@ -65,7 +67,7 @@ function TaskCard({
 
   return (
     <div
-      className={`task-card task-card--${resolved} ${zombieClass} ${onClick ? 'is-interactive' : ''}`}
+      className={`task-card task-card--${resolved} ${zombieClass} ${dimmed ? 'task-card--dimmed' : ''} ${onClick ? 'is-interactive' : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -106,6 +108,8 @@ function TaskCard({
 
           {delayedFrom && <p className="task-card__delayed-from">{delayedFrom}부터 미뤄진 작업</p>}
 
+          {dimmed && <span className="task-card__dim-note">지금 상황엔 무리 · 시간·에너지 초과</span>}
+
           {(timeRange || isCritical || assignees.length > 0) && (
             <div className="task-card__footer">
               {timeRange && <span className="task-card__sub mono">{timeRange}</span>}
@@ -123,7 +127,7 @@ function TaskCard({
           )}
         </div>
 
-        {isTimerRunning && timerValue && (
+        {hasTimer && (
           <TimerDisplay
             value={timerValue}
             isRunning={isTimerRunning}
