@@ -10,19 +10,25 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+  min-width: 0;
   padding-bottom: var(--space-3);
   border-bottom: 1px solid var(--color-border);
+  transition: border-color var(--transition-fast);
 }
+.quick-add-modal__main:focus-within { border-bottom-color: var(--color-text-primary); }
 .quick-add-modal__icon { color: var(--color-text-disabled); flex-shrink: 0; }
 .quick-add-modal__title {
   flex: 1;
+  min-width: 0;
   border: none;
-  outline: none;
   background: transparent;
   font-size: var(--fs-md);
   font-weight: var(--fw-semibold);
   color: var(--color-text-primary);
 }
+/* Focus is shown by the row's bottom border, not a sticking-out outline */
+.quick-add-modal__title:focus,
+.quick-add-modal__title:focus-visible { outline: none; }
 .quick-add-modal__title::placeholder {
   color: var(--color-text-disabled);
   font-weight: var(--fw-regular);

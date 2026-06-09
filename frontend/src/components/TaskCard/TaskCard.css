@@ -117,6 +117,40 @@
 }
 .task-card__avatar:first-child { margin-left: 0; }
 
+/* Flat-line layout — hairline rows, no card chrome, meta right-aligned.
+   Doubled class (.task-card.task-card--line) to beat the base .task-card
+   flex-direction regardless of stylesheet order. */
+.task-card.task-card--line {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 11px var(--space-2);
+}
+.task-card--line:hover { background: var(--color-card-muted); }
+.task-card--line .task-card__title {
+  font-size: var(--fs-base);
+  font-weight: var(--fw-medium);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.task-card--line-priority .task-card__title { font-weight: var(--fw-bold); }
+.task-card--line-zombie,
+.task-card--line-zombie:hover { background: var(--color-zombie-bg); }
+.task-card--line-zombie .task-card__check { border-color: var(--color-zombie-accent); }
+.task-card__line-meta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
 /* Out-of-context (doesn't fit current energy/time) — de-emphasised, not hidden */
 .task-card--dimmed {
   opacity: 0.55;

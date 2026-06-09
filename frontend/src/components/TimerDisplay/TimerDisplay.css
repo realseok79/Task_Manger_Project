@@ -1,10 +1,14 @@
 .timer {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
-.timer-display--lg { font-size: var(--fs-timer); }
-.timer-display--md { font-size: 2rem; }
+.timer-display {
+  font-variant-numeric: tabular-nums;
+}
+.timer-display--sm { font-size: 1.25rem; }
+.timer-display--md { font-size: 1.6rem; }
+.timer-display--lg { font-size: 2rem; }
 .timer-display--dark { color: var(--color-text-primary); }
 
 .timer__controls {
@@ -15,14 +19,31 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
-  border-radius: var(--radius-md);
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-control);
   background: var(--color-card);
+  border: 1px solid var(--color-border);
   color: var(--color-text-secondary);
-  box-shadow: var(--shadow-card);
-  transition: background var(--transition-fast), transform var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), transform var(--transition-fast);
 }
-.timer__btn:hover { background: var(--color-card-muted); }
+.timer__btn:hover { background: var(--color-card-muted); color: var(--color-text-primary); }
 .timer__btn:active { transform: scale(0.94); }
 .timer__btn--stop { color: var(--color-danger); }
+
+/* Idle: a single quiet "집중 시작" button instead of a giant clock */
+.timer-start {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 14px;
+  border-radius: var(--radius-control);
+  background: var(--color-card);
+  border: 1px solid var(--color-border-strong);
+  color: var(--color-text-primary);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  transition: background var(--transition-fast);
+}
+.timer-start:hover { background: var(--color-card-muted); }
+.timer-start svg { color: var(--color-text-secondary); }

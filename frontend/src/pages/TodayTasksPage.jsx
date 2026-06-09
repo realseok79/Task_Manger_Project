@@ -29,6 +29,7 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
   const [energyLevel, setEnergyLevel] = useState('MEDIUM');
   const [zombieTask, setZombieTask] = useState(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [layout, setLayout] = useState('line'); // 'card' | 'line' — flat list by default
 
   const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, addTask } = useTasks(energyLevel, timeAvailable);
   const timer = useTimer(0, false); // idle until the user starts focusing
@@ -73,7 +74,14 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
         </div>
         <div className="page-header__actions">
           <button className="icon-btn" aria-label="정렬"><ArrowUpDown size={18} /></button>
-          <button className="icon-btn" aria-label="그리드 보기"><LayoutGrid size={18} /></button>
+          <button
+            className={`icon-btn ${layout === 'line' ? 'is-active' : ''}`}
+            aria-label={layout === 'line' ? '카드 보기로 전환' : '목록 보기로 전환'}
+            aria-pressed={layout === 'line'}
+            onClick={() => setLayout((l) => (l === 'card' ? 'line' : 'card'))}
+          >
+            <LayoutGrid size={18} />
+          </button>
           <button className="icon-btn" aria-label="인사이트"><Lightbulb size={18} /></button>
           <button className="icon-btn" aria-label="더보기"><MoreHorizontal size={18} /></button>
         </div>
@@ -118,11 +126,17 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
         ) : pending.length === 0 ? (
           <EmptyState />
         ) : (
-          <motion.div className="task-list" variants={listContainerVariants} initial="hidden" animate="show">
+          <motion.div
+            className={`task-list ${layout === 'line' ? 'task-list--line' : ''}`}
+            variants={listContainerVariants}
+            initial="hidden"
+            animate="show"
+          >
             {pending.map((t) => (
               <motion.div key={t.id} variants={listItemVariants}>
                 <TaskCard
                   variant={t.variant}
+                  layout={layout}
                   title={t.title}
                   tags={t.tags}
                   dday={t.dday}

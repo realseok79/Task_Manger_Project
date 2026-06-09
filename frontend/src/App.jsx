@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import Sidebar from './components/Sidebar/Sidebar';
 import TopBar from './components/TopBar/TopBar';
 import TodayTasksPage from './pages/TodayTasksPage';
@@ -78,24 +78,24 @@ export default function App() {
           onSearch={() => {}}
         />
         <div className="page-content">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={page}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.2 }}
-            >
-              {page === 'today' && (
-                <TodayTasksPage
-                  composeRequested={composeRequested}
-                  onComposeHandled={() => setComposeRequested(false)}
-                />
-              )}
-              {page === 'history' && <HistoryPage />}
-              {page === 'important' && <ImportantTasksPage />}
-            </motion.div>
-          </AnimatePresence>
+          {/* Keyed enter-only transition: replacing the page remounts + fades in.
+              No AnimatePresence "wait" gate, so a stalled exit can never leave a
+              blank screen (robust under Fast Refresh and in production). */}
+          <motion.div
+            key={page}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+          >
+            {page === 'today' && (
+              <TodayTasksPage
+                composeRequested={composeRequested}
+                onComposeHandled={() => setComposeRequested(false)}
+              />
+            )}
+            {page === 'history' && <HistoryPage />}
+            {page === 'important' && <ImportantTasksPage />}
+          </motion.div>
         </div>
       </div>
     </div>

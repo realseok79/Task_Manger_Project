@@ -1,43 +1,41 @@
 import { memo } from 'react';
 import { Pause, Play, Square } from 'lucide-react';
-import { useTimerFlip, useRipple } from '../../hooks/useAnimations';
 import './TimerDisplay.css';
 
 /**
- * TimerDisplay — monospace HH:MM:SS with a flip on change + pause/stop controls.
+ * TimerDisplay — calm focus timer.
+ * Idle shows a quiet "집중 시작" button; running/paused shows a small monospace
+ * time + controls. No per-tick flip animation (tabular-nums keeps it steady).
  */
-function TimerDisplay({ value, isRunning, onPause, onResume, onStop, size = 'lg' }) {
-  const flipKey = useTimerFlip(value);
-  const ripple = useRipple();
+function TimerDisplay({ value, isRunning, onPause, onResume, onStop, size = 'sm' }) {
+  const hasControls = Boolean(onPause || onResume || onStop);
+  const idle = !isRunning && (!value || value === '00:00:00');
+
+  if (idle && hasControls) {
+    return (
+      <button type="button" className="timer-start" onClick={onResume}>
+        <Play size={14} aria-hidden="true" /> 집중 시작
+      </button>
+    );
+  }
 
   return (
     <div className="timer">
-      <span
-        key={flipKey}
-        className={`timer-display timer-display--${size} anim-digit-flip`}
-        aria-live="off"
-      >
+      <span className={`timer-display timer-display--${size}`} aria-live="off">
         {value}
       </span>
-      {(onPause || onStop) && (
+      {hasControls && (
         <div className="timer__controls">
           <button
             type="button"
-            className="timer__btn ripple-host"
-            onPointerDown={ripple}
+            className="timer__btn"
             onClick={isRunning ? onPause : onResume}
             aria-label={isRunning ? '타이머 일시정지' : '타이머 재생'}
           >
-            {isRunning ? <Pause size={16} /> : <Play size={16} />}
+            {isRunning ? <Pause size={15} /> : <Play size={15} />}
           </button>
-          <button
-            type="button"
-            className="timer__btn timer__btn--stop ripple-host"
-            onPointerDown={ripple}
-            onClick={onStop}
-            aria-label="타이머 정지"
-          >
-            <Square size={14} />
+          <button type="button" className="timer__btn timer__btn--stop" onClick={onStop} aria-label="타이머 정지">
+            <Square size={13} />
           </button>
         </div>
       )}

@@ -74,7 +74,7 @@
   --fs-md: 1.0625rem;
   --fs-lg: 1.25rem;
   --fs-xl: 1.625rem;   /* page titles */
-  --fs-timer: 2.5rem;  /* timer digits */
+  --fs-timer: 1.25rem; /* timer digits — compact, calm */
 
   --fw-regular: 400;
   --fw-medium: 500;
@@ -325,7 +325,8 @@ ul {
   color: var(--color-text-secondary);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
-.icon-btn:hover {
+.icon-btn:hover,
+.icon-btn.is-active {
   background: var(--color-nav-active);
   color: var(--color-text-primary);
 }

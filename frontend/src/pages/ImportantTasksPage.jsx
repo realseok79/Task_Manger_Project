@@ -52,11 +52,12 @@ export default function ImportantTasksPage() {
             <p className="empty-state__text">지금 중요 표시된 작업이 없습니다.</p>
           </div>
         ) : (
-          <motion.div className="task-list" variants={listContainerVariants} initial="hidden" animate="show">
+          <motion.div className="task-list task-list--line" variants={listContainerVariants} initial="hidden" animate="show">
             {important.map((t) => (
               <motion.div key={t.id} variants={listItemVariants}>
                 <TaskCard
                   variant={t.variant}
+                  layout="line"
                   title={t.title}
                   tags={t.tags}
                   dday={t.dday}

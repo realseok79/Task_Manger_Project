@@ -23,6 +23,7 @@ function TaskCard({
   isCritical = false,
   assignees = [],
   dimmed = false,
+  layout = 'card', // 'card' | 'line'
   isTimerRunning = false,
   timerValue,
   onComplete,
@@ -64,6 +65,42 @@ function TaskCard({
     e.stopPropagation();
     onComplete?.();
   };
+
+  // --- Flat-line layout (Things/Linear): one line, meta pushed right -------
+  if (layout === 'line') {
+    return (
+      <div
+        className={`task-card task-card--line task-card--line-${resolved} ${dimmed ? 'task-card--dimmed' : ''} ${onClick ? 'is-interactive' : ''}`}
+        onClick={onClick}
+        role={onClick ? 'button' : undefined}
+        tabIndex={onClick ? 0 : undefined}
+        onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick()) : undefined}
+      >
+        <button
+          type="button"
+          className="task-card__check"
+          role="checkbox"
+          aria-checked="false"
+          aria-label={`${title} 완료 처리`}
+          onClick={handleCheck}
+        />
+        <span className="task-card__title" title={title}>{truncated}</span>
+        {resolved === 'zombie' && (
+          <span className="task-card__delay-badge">
+            <AlertTriangle size={12} aria-hidden="true" />
+            {delayCount}번 미뤄짐
+          </span>
+        )}
+        <span className="task-card__line-meta">
+          {tags.map((t) => (
+            <TagBadge key={t.label} label={t.label} category={t.category} />
+          ))}
+          {dday && <TagBadge label={dday} category="deadline" />}
+          {scheduledTime && <span className="task-card__sub mono">{scheduledTime}</span>}
+        </span>
+      </div>
+    );
+  }
 
   return (
     <div

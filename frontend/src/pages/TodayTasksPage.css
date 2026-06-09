@@ -64,17 +64,20 @@
 
 .task-list,
 .skeleton-list { display: flex; flex-direction: column; gap: var(--space-3); }
+/* Flat-line rows carry their own hairline separators — no gap between them */
+.task-list--line { gap: 0; }
 
-/* Quiet inline trigger — borderless row that opens the composer (Things/Linear) */
+/* Quiet inline trigger — content-width text action, not a full-width bar (Things) */
 .add-trigger {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--space-2);
-  width: 100%;
-  padding: 10px var(--space-3);
+  align-self: flex-start;
+  padding: 7px 10px;
   margin-bottom: var(--space-2);
   border-radius: var(--radius-control);
-  font-size: var(--fs-base);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
   color: var(--color-text-secondary);
   transition: background var(--transition-fast), color var(--transition-fast);
 }
@@ -85,13 +88,12 @@
 .add-trigger svg { color: var(--color-text-disabled); }
 .add-trigger:hover svg { color: var(--color-text-primary); }
 .add-trigger__kbd {
-  margin-left: auto;
   font-family: var(--font-mono);
-  font-size: 0.7rem;
+  font-size: 0.68rem;
   background: var(--color-card-muted);
   border: 1px solid var(--color-border);
   border-radius: 4px;
-  padding: 1px 6px;
+  padding: 1px 5px;
   color: var(--color-text-disabled);
 }
 
