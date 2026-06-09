@@ -202,4 +202,17 @@ export const mockApi = {
     await latency(200);
     return clone(TASKS.filter((t) => t.status === 'ARCHIVED'));
   },
+
+  async deleteTask(taskId) {
+    await latency(160);
+    TASKS = TASKS.filter((t) => t.taskId !== taskId);
+    return { ok: true };
+  },
+
+  // Re-insert an exact task (undo of a permanent delete).
+  async recreateTask(task) {
+    await latency(160);
+    if (!TASKS.some((t) => t.taskId === task.taskId)) TASKS = [...TASKS, task];
+    return clone(task);
+  },
 };

@@ -1,18 +1,25 @@
 import { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Archive, RotateCcw } from 'lucide-react';
+import { Archive, RotateCcw, Trash2 } from 'lucide-react';
 import TagBadge from '../components/TagBadge/TagBadge';
-import { getArchivedTasks, restoreTask as apiRestore, toViewModel } from '../api/tasks';
+import {
+  getArchivedTasks,
+  restoreTask as apiRestore,
+  deleteTask as apiDelete,
+  recreateTask as apiRecreate,
+  toViewModel,
+} from '../api/tasks';
 import { listContainerVariants, listItemVariants } from '../hooks/useAnimations';
 import './TodayTasksPage.css';
 import './ArchivePage.css';
 
 /**
- * ArchivePage — tasks the user hid via "보관하기". Each row can be restored
- * back to the active list. This is where the archive toast points to.
+ * ArchivePage — tasks the user hid via "보관하기". Each row can be restored to
+ * the active list or permanently deleted (with a 5s undo). Destination of the
+ * archive toast.
  */
 export default function ArchivePage({ onToast }) {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState([]); // raw tasks
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,7 +27,7 @@ export default function ArchivePage({ onToast }) {
     getArchivedTasks()
       .then((data) => {
         if (!alive) return;
-        setItems(data.map(toViewModel));
+        setItems(data);
         setLoading(false);
       })
       .catch(() => setLoading(false));
@@ -29,10 +36,21 @@ export default function ArchivePage({ onToast }) {
     };
   }, []);
 
-  const restore = (t) => {
-    setItems((list) => list.filter((x) => x.id !== t.id));
-    apiRestore(t.id).catch(() => {});
+  const drop = (id) => setItems((list) => list.filter((x) => x.taskId !== id));
+
+  const restore = (raw) => {
+    drop(raw.taskId);
+    apiRestore(raw.taskId).catch(() => {});
     onToast?.('작업을 복구했어요');
+  };
+
+  const remove = (raw) => {
+    drop(raw.taskId);
+    apiDelete(raw.taskId).catch(() => {});
+    onToast?.('작업을 삭제했어요', '실행취소', () => {
+      setItems((list) => (list.some((x) => x.taskId === raw.taskId) ? list : [...list, raw]));
+      apiRecreate(raw).catch(() => {});
+    });
   };
 
   return (
@@ -56,26 +74,39 @@ export default function ArchivePage({ onToast }) {
         ) : (
           <motion.div className="archive-list" variants={listContainerVariants} initial="hidden" animate="show">
             <AnimatePresence initial={false}>
-              {items.map((t) => (
-                <motion.div
-                  key={t.id}
-                  variants={listItemVariants}
-                  layout
-                  exit={{ opacity: 0, height: 0, transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] } }}
-                  style={{ overflow: 'hidden' }}
-                >
-                  <div className="archive-row">
-                    <span className="archive-row__title" title={t.title}>{t.title}</span>
-                    <span className="archive-row__meta">
-                      {t.tags.map((tag) => <TagBadge key={tag.label} label={tag.label} category={tag.category} />)}
-                      {t.dday && <TagBadge label={t.dday} category="deadline" />}
-                    </span>
-                    <button type="button" className="archive-row__restore" onClick={() => restore(t)}>
-                      <RotateCcw size={14} aria-hidden="true" /> 복구
-                    </button>
-                  </div>
-                </motion.div>
-              ))}
+              {items.map((raw) => {
+                const t = toViewModel(raw);
+                return (
+                  <motion.div
+                    key={t.id}
+                    variants={listItemVariants}
+                    layout
+                    exit={{ opacity: 0, height: 0, transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] } }}
+                    style={{ overflow: 'hidden' }}
+                  >
+                    <div className="archive-row">
+                      <span className="archive-row__title" title={t.title}>{t.title}</span>
+                      <span className="archive-row__meta">
+                        {t.tags.map((tag) => <TagBadge key={tag.label} label={tag.label} category={tag.category} />)}
+                        {t.dday && <TagBadge label={t.dday} category="deadline" />}
+                      </span>
+                      <div className="archive-row__actions">
+                        <button type="button" className="archive-row__restore" onClick={() => restore(raw)}>
+                          <RotateCcw size={14} aria-hidden="true" /> 복구
+                        </button>
+                        <button
+                          type="button"
+                          className="archive-row__delete"
+                          onClick={() => remove(raw)}
+                          aria-label={`${t.title} 영구 삭제`}
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </motion.div>
         )}

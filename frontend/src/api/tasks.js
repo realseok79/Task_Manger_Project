@@ -115,6 +115,19 @@ export async function getArchivedTasks(userId) {
   return data;
 }
 
+export async function deleteTask(taskId) {
+  if (USE_MOCK) return mockApi.deleteTask(taskId);
+  const { data } = await client.delete(`/api/tasks/${taskId}`);
+  return data;
+}
+
+/** Re-create an exact task (undo of a permanent delete). */
+export async function recreateTask(task) {
+  if (USE_MOCK) return mockApi.recreateTask(task);
+  const { data } = await client.post('/api/tasks', task);
+  return data;
+}
+
 export async function getCompletedTasks(userId, filter) {
   if (USE_MOCK) return mockApi.getCompletedTasks(userId, filter);
   // Live: logs lack titles, so map best-effort. (Backend limitation noted.)
