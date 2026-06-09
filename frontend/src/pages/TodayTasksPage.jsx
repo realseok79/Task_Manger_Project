@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ArrowUpDown, LayoutGrid, Plus, Check } from 'lucide-react';
 import TaskCard from '../components/TaskCard/TaskCard';
 import ContextBar from '../components/ContextBar/ContextBar';
@@ -38,7 +38,7 @@ function computePriority(energy, time) {
   return 'Low';
 }
 
-export default function TodayTasksPage({ composeRequested = false, onComposeHandled }) {
+export default function TodayTasksPage({ composeRequested = false, onComposeHandled, onToast }) {
   const [timeAvailable, setTimeAvailable] = useState(4.5);
   const [energyLevel, setEnergyLevel] = useState('MEDIUM');
   const [zombieTask, setZombieTask] = useState(null);
@@ -48,7 +48,7 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef(null);
 
-  const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, addTask } = useTasks(energyLevel, timeAvailable);
+  const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, restoreTask, addTask } = useTasks(energyLevel, timeAvailable);
   const timer = useTimer(0, false); // idle until the user starts focusing
 
   const views = useMemo(() => tasks.map(toViewModel), [tasks]);
@@ -202,23 +202,31 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
             initial="hidden"
             animate="show"
           >
-            {pending.map((t) => (
-              <motion.div key={t.id} variants={listItemVariants}>
-                <TaskCard
-                  variant={t.variant}
-                  layout={layout}
-                  title={t.title}
-                  tags={t.tags}
-                  dday={t.dday}
-                  scheduledTime={t.scheduledTime}
-                  delayedFrom={t.delayedFrom}
-                  delayCount={t.delayCount}
-                  dimmed={!t.fits && !t.isZombie}
-                  onComplete={() => completeTask(t.id)}
-                  onClick={t.isZombie ? () => onCardClick(t) : undefined}
-                />
-              </motion.div>
-            ))}
+            <AnimatePresence initial={false}>
+              {pending.map((t) => (
+                <motion.div
+                  key={t.id}
+                  variants={listItemVariants}
+                  layout
+                  exit={{ opacity: 0, height: 0, transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] } }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <TaskCard
+                    variant={t.variant}
+                    layout={layout}
+                    title={t.title}
+                    tags={t.tags}
+                    dday={t.dday}
+                    scheduledTime={t.scheduledTime}
+                    delayedFrom={t.delayedFrom}
+                    delayCount={t.delayCount}
+                    dimmed={!t.fits && !t.isZombie}
+                    onComplete={() => completeTask(t.id)}
+                    onClick={t.isZombie ? () => onCardClick(t) : undefined}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </motion.div>
         )}
       </section>
@@ -234,7 +242,9 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
         taskTitle={zombieTask?.title}
         delayCount={zombieTask?.delayCount ?? 0}
         onArchive={() => {
-          archiveTask(zombieTask.id);
+          archiveTask(zombieTask.id, (snap) =>
+            onToast?.('보관함으로 옮겼어요', '실행취소', () => restoreTask(snap))
+          );
           setZombieTask(null);
         }}
         onKeep={() => {

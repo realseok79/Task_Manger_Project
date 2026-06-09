@@ -100,6 +100,8 @@ export const snoozeTask = (taskId, energy, minutes) =>
   updateTaskStatus(taskId, 'SNOOZE', energy, minutes);
 export const archiveTask = (taskId, energy, minutes) =>
   updateTaskStatus(taskId, 'ARCHIVE', energy, minutes);
+export const restoreTask = (taskId, energy, minutes) =>
+  updateTaskStatus(taskId, 'RESTORE', energy, minutes);
 
 export async function getZombieTasks(userId) {
   if (USE_MOCK) return mockApi.getZombieTasks(userId);

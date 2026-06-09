@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import TaskCard from '../components/TaskCard/TaskCard';
 import ZombieModal from '../components/ZombieModal/ZombieModal';
 import { useTasks } from '../hooks/useTasks';
@@ -11,12 +11,12 @@ import './TodayTasksPage.css';
  * ImportantTasksPage — high-importance PENDING tasks only (importance >= 4),
  * zombies first then importance descending. A focused list, not a dashboard.
  */
-export default function ImportantTasksPage() {
+export default function ImportantTasksPage({ onToast }) {
   const [zombieTask, setZombieTask] = useState(null);
 
   // Energy/time context is irrelevant here; pass wide defaults so nothing is
   // hidden by the (mock-bypassed) hard filter. We slice by importance instead.
-  const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask } = useTasks('HIGH', 8);
+  const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, restoreTask } = useTasks('HIGH', 8);
 
   const important = useMemo(
     () =>
@@ -53,22 +53,30 @@ export default function ImportantTasksPage() {
           </div>
         ) : (
           <motion.div className="task-list task-list--line" variants={listContainerVariants} initial="hidden" animate="show">
-            {important.map((t) => (
-              <motion.div key={t.id} variants={listItemVariants}>
-                <TaskCard
-                  variant={t.variant}
-                  layout="line"
-                  title={t.title}
-                  tags={t.tags}
-                  dday={t.dday}
-                  scheduledTime={t.scheduledTime}
-                  delayedFrom={t.delayedFrom}
-                  delayCount={t.delayCount}
-                  onComplete={() => completeTask(t.id)}
-                  onClick={t.isZombie ? () => onCardClick(t) : undefined}
-                />
-              </motion.div>
-            ))}
+            <AnimatePresence initial={false}>
+              {important.map((t) => (
+                <motion.div
+                  key={t.id}
+                  variants={listItemVariants}
+                  layout
+                  exit={{ opacity: 0, height: 0, transition: { duration: 0.22, ease: [0.4, 0, 0.2, 1] } }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <TaskCard
+                    variant={t.variant}
+                    layout="line"
+                    title={t.title}
+                    tags={t.tags}
+                    dday={t.dday}
+                    scheduledTime={t.scheduledTime}
+                    delayedFrom={t.delayedFrom}
+                    delayCount={t.delayCount}
+                    onComplete={() => completeTask(t.id)}
+                    onClick={t.isZombie ? () => onCardClick(t) : undefined}
+                  />
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </motion.div>
         )}
       </section>
@@ -78,7 +86,9 @@ export default function ImportantTasksPage() {
         taskTitle={zombieTask?.title}
         delayCount={zombieTask?.delayCount ?? 0}
         onArchive={() => {
-          archiveTask(zombieTask.id);
+          archiveTask(zombieTask.id, (snap) =>
+            onToast?.('보관함으로 옮겼어요', '실행취소', () => restoreTask(snap))
+          );
           setZombieTask(null);
         }}
         onKeep={() => {

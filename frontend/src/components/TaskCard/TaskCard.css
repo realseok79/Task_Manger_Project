@@ -157,6 +157,16 @@
   min-width: 60px;
 }
 
+/* Completing — check fills, row dims + strikes through before it animates out */
+.task-card--done {
+  opacity: 0.55;
+  transition: opacity var(--transition-base);
+}
+.task-card--done .task-card__title {
+  text-decoration: line-through;
+  color: var(--color-text-disabled);
+}
+
 /* Out-of-context (doesn't fit current energy/time) — de-emphasised, not hidden */
 .task-card--dimmed {
   opacity: 0.55;

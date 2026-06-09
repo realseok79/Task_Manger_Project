@@ -169,6 +169,8 @@ export const mockApi = {
       if (t.taskId !== taskId) return t;
       if (action === 'COMPLETE') return { ...t, status: 'COMPLETED' };
       if (action === 'ARCHIVE') return { ...t, status: 'ARCHIVED' };
+      if (action === 'RESTORE') return { ...t, status: 'PENDING' }; // undo archive
+
       // SNOOZE: keep it visible in "today" but bump the delay counter so it can
       // graduate to a zombie at 5.
       if (action === 'SNOOZE') return { ...t, delayCount: t.delayCount + 1 };

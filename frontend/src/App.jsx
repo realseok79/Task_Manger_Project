@@ -1,38 +1,76 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import Sidebar from './components/Sidebar/Sidebar';
 import TopBar from './components/TopBar/TopBar';
+import Toast from './components/Toast/Toast';
+import SettingsModal from './components/SettingsModal/SettingsModal';
+import HelpModal from './components/HelpModal/HelpModal';
 import TodayTasksPage from './pages/TodayTasksPage';
 import HistoryPage from './pages/HistoryPage';
 import ImportantTasksPage from './pages/ImportantTasksPage';
+import { useNotifications } from './hooks/useNotifications';
 
 /**
- * App shell — sidebar + topbar + routed page area.
- * Lightweight client routing via state (no router dependency needed).
+ * App shell — sidebar + topbar + routed page area, plus app-level chrome
+ * (theme, notifications, settings/help modals, toast).
  */
 export default function App() {
   const [page, setPage] = useState('today'); // 'today' | 'important' | 'history'
-  const [isDark, setIsDark] = useState(() => window.matchMedia?.('(prefers-color-scheme: dark)').matches ?? false);
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [composeRequested, setComposeRequested] = useState(false); // => open the Today quick-add modal
+  const [composeRequested, setComposeRequested] = useState(false);
+
+  // Theme: 'system' | 'light' | 'dark' (persisted); isDark is derived.
+  const [themeMode, setThemeMode] = useState(() => localStorage.getItem('sigma-theme') || 'system');
+  const [isDark, setIsDark] = useState(false);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(
+    () => localStorage.getItem('sigma-notif') !== 'off'
+  );
+
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const [toast, setToast] = useState(null);
+  const toastTimer = useRef(null);
+
+  const notifications = useNotifications();
+  const shownNotifications = notificationsEnabled ? notifications : [];
+
+  useEffect(() => {
+    localStorage.setItem('sigma-theme', themeMode);
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const compute = () => setIsDark(themeMode === 'dark' || (themeMode === 'system' && mq.matches));
+    compute();
+    if (themeMode === 'system') {
+      mq.addEventListener('change', compute);
+      return () => mq.removeEventListener('change', compute);
+    }
+    return undefined;
+  }, [themeMode]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
   }, [isDark]);
+
+  useEffect(() => {
+    localStorage.setItem('sigma-notif', notificationsEnabled ? 'on' : 'off');
+  }, [notificationsEnabled]);
+
+  const showToast = useCallback((message, actionLabel, onAction) => {
+    setToast({ id: Date.now(), message, actionLabel, onAction });
+    clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setToast(null), 5000);
+  }, []);
 
   const navigate = (id) => {
     setPage(id);
     setDrawerOpen(false);
   };
 
-  // Land on Today and request the quick-add composer to open.
   const requestCompose = () => {
     navigate('today');
     setComposeRequested(true);
   };
 
-  // Global keyboard: ⌘K (Mac) / Ctrl+K (Windows) anywhere, plus a bare "n"
-  // when not typing in a field. Both open the quick-add composer.
+  // Global keyboard: ⌘K / Ctrl+K anywhere, plus a bare "n" outside fields.
   useEffect(() => {
     const onKeyDown = (e) => {
       const mod = e.metaKey || e.ctrlKey;
@@ -63,24 +101,24 @@ export default function App() {
         activeItem={page}
         onNavigate={navigate}
         onAddTask={requestCompose}
+        onOpenSettings={() => setSettingsOpen(true)}
+        onOpenHelp={() => setHelpOpen(true)}
         isOpen={drawerOpen}
       />
 
-      {/* Mobile drawer scrim */}
       {drawerOpen && <div className="app-scrim" onClick={() => setDrawerOpen(false)} aria-hidden="true" />}
 
       <div className="app-main">
         <TopBar
           isDarkMode={isDark}
-          hasNotification
-          onThemeToggle={() => setIsDark((d) => !d)}
+          notifications={shownNotifications}
+          onThemeToggle={() => setThemeMode(isDark ? 'light' : 'dark')}
           onMenu={() => setDrawerOpen((o) => !o)}
           onSearch={() => {}}
+          onOpenSettings={() => setSettingsOpen(true)}
+          onOpenHelp={() => setHelpOpen(true)}
         />
         <div className="page-content">
-          {/* Keyed enter-only transition: replacing the page remounts + fades in.
-              No AnimatePresence "wait" gate, so a stalled exit can never leave a
-              blank screen (robust under Fast Refresh and in production). */}
           <motion.div
             key={page}
             initial={{ opacity: 0, y: 8 }}
@@ -91,13 +129,25 @@ export default function App() {
               <TodayTasksPage
                 composeRequested={composeRequested}
                 onComposeHandled={() => setComposeRequested(false)}
+                onToast={showToast}
               />
             )}
             {page === 'history' && <HistoryPage />}
-            {page === 'important' && <ImportantTasksPage />}
+            {page === 'important' && <ImportantTasksPage onToast={showToast} />}
           </motion.div>
         </div>
       </div>
+
+      <SettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        themeMode={themeMode}
+        onThemeMode={setThemeMode}
+        notificationsEnabled={notificationsEnabled}
+        onToggleNotifications={() => setNotificationsEnabled((v) => !v)}
+      />
+      <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
+      <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

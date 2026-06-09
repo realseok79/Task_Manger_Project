@@ -9,6 +9,7 @@ import {
   completeTask as apiComplete,
   snoozeTask as apiSnooze,
   archiveTask as apiArchive,
+  restoreTask as apiRestore,
 } from '../api/tasks';
 import { DEFAULT_USER_ID } from '../api/client';
 
@@ -72,13 +73,26 @@ export function useTasks(energyLevel, timeAvailable, userId = DEFAULT_USER_ID) {
     [mutate, energyLevel, minutes]
   );
 
+  // Archive removes the task but hands the caller a snapshot so it can offer undo.
   const archiveTask = useCallback(
-    (taskId) =>
-      mutate(
+    (taskId, onArchived) => {
+      onArchived?.(tasks.find((t) => t.taskId === taskId));
+      return mutate(
         (list) => list.filter((t) => t.taskId !== taskId),
         () => apiArchive(taskId, energyLevel, minutes)
-      ),
-    [mutate, energyLevel, minutes]
+      );
+    },
+    [mutate, energyLevel, minutes, tasks]
+  );
+
+  // Restore a previously archived task (undo) — re-insert + set back to PENDING.
+  const restoreTask = useCallback(
+    (task) => {
+      if (!task) return;
+      setTasks((list) => (list.some((t) => t.taskId === task.taskId) ? list : [...list, { ...task, status: 'PENDING' }]));
+      apiRestore(task.taskId, energyLevel, minutes).catch(() => {});
+    },
+    [energyLevel, minutes]
   );
 
   const addTask = useCallback(
@@ -107,5 +121,5 @@ export function useTasks(energyLevel, timeAvailable, userId = DEFAULT_USER_ID) {
     [userId]
   );
 
-  return { tasks, isLoading, error, refetch: fetchTasks, completeTask, snoozeTask, archiveTask, addTask, clearError: () => setError(null) };
+  return { tasks, isLoading, error, refetch: fetchTasks, completeTask, snoozeTask, archiveTask, restoreTask, addTask, clearError: () => setError(null) };
 }

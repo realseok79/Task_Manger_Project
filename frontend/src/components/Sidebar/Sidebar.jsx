@@ -8,7 +8,7 @@ const NAV = [
 ];
 
 /** Sidebar — brand, primary nav, Add button, secondary links. */
-export default function Sidebar({ activeItem, onNavigate, onAddTask, isOpen }) {
+export default function Sidebar({ activeItem, onNavigate, onAddTask, onOpenSettings, onOpenHelp, isOpen }) {
   return (
     <aside className={`sidebar anim-sidebar-in ${isOpen ? 'sidebar--open' : ''}`} aria-label="주요 메뉴">
       <div className="sidebar__brand">
@@ -39,11 +39,11 @@ export default function Sidebar({ activeItem, onNavigate, onAddTask, isOpen }) {
       </button>
 
       <div className="sidebar__footer">
-        <button type="button" className="sidebar-nav-item">
+        <button type="button" className="sidebar-nav-item" onClick={onOpenSettings}>
           <Settings size={18} aria-hidden="true" />
           <span className="sidebar__labels">설정</span>
         </button>
-        <button type="button" className="sidebar-nav-item">
+        <button type="button" className="sidebar-nav-item" onClick={onOpenHelp}>
           <HelpCircle size={18} aria-hidden="true" />
           <span className="sidebar__labels">도움말</span>
         </button>

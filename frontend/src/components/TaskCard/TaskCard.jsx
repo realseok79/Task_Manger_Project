@@ -1,4 +1,4 @@
-import { memo } from 'react';
+import { memo, useState } from 'react';
 import { Check, AlertTriangle } from 'lucide-react';
 import TagBadge from '../TagBadge/TagBadge';
 import TimerDisplay from '../TimerDisplay/TimerDisplay';
@@ -61,16 +61,21 @@ function TaskCard({
 
   // --- Active card (default / priority / zombie) ---------------------------
   const zombieClass = usePulse(resolved === 'zombie', 'anim-zombie-in');
+  const [done, setDone] = useState(false);
+  // Check fills, the row dims/strikes, then completes — the parent's removal
+  // triggers the list exit (fade + collapse) animation.
   const handleCheck = (e) => {
     e.stopPropagation();
-    onComplete?.();
+    if (done) return;
+    setDone(true);
+    setTimeout(() => onComplete?.(), 280);
   };
 
   // --- Flat-line layout (Things/Linear): one line, meta pushed right -------
   if (layout === 'line') {
     return (
       <div
-        className={`task-card task-card--line task-card--line-${resolved} ${dimmed ? 'task-card--dimmed' : ''} ${onClick ? 'is-interactive' : ''}`}
+        className={`task-card task-card--line task-card--line-${resolved} ${dimmed ? 'task-card--dimmed' : ''} ${done ? 'task-card--done' : ''} ${onClick ? 'is-interactive' : ''}`}
         onClick={onClick}
         role={onClick ? 'button' : undefined}
         tabIndex={onClick ? 0 : undefined}
@@ -78,12 +83,14 @@ function TaskCard({
       >
         <button
           type="button"
-          className="task-card__check"
+          className={`task-card__check ${done ? 'is-checked' : ''}`}
           role="checkbox"
-          aria-checked="false"
+          aria-checked={done}
           aria-label={`${title} 완료 처리`}
           onClick={handleCheck}
-        />
+        >
+          {done && <Check size={14} strokeWidth={3} />}
+        </button>
         <span className="task-card__title" title={title}>{truncated}</span>
         {resolved === 'zombie' && (
           <span className="task-card__delay-badge">
@@ -104,7 +111,7 @@ function TaskCard({
 
   return (
     <div
-      className={`task-card task-card--${resolved} ${zombieClass} ${dimmed ? 'task-card--dimmed' : ''} ${onClick ? 'is-interactive' : ''}`}
+      className={`task-card task-card--${resolved} ${zombieClass} ${dimmed ? 'task-card--dimmed' : ''} ${done ? 'task-card--done' : ''} ${onClick ? 'is-interactive' : ''}`}
       onClick={onClick}
       role={onClick ? 'button' : undefined}
       tabIndex={onClick ? 0 : undefined}
@@ -113,12 +120,14 @@ function TaskCard({
       <div className="task-card__body">
         <button
           type="button"
-          className="task-card__check"
+          className={`task-card__check ${done ? 'is-checked' : ''}`}
           role="checkbox"
-          aria-checked="false"
+          aria-checked={done}
           aria-label={`${title} 완료 처리`}
           onClick={handleCheck}
-        />
+        >
+          {done && <Check size={14} strokeWidth={3} />}
+        </button>
 
         <div className="task-card__content">
           <div className="task-card__titlerow">

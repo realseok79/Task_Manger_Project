@@ -1,0 +1,57 @@
+/* Segmented control (theme) */
+.seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--color-card-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-control);
+}
+.seg__btn {
+  flex: 1;
+  padding: 7px 12px;
+  border-radius: 6px;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+.seg__btn.is-active {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+}
+
+/* Row with label + control on the right */
+.settings-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+.settings-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Toggle switch */
+.switch {
+  width: 40px;
+  height: 24px;
+  flex-shrink: 0;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  padding: 2px;
+  transition: background var(--transition-base);
+}
+.switch.is-on { background: var(--color-primary); }
+.switch__thumb {
+  display: block;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-card);
+  transition: transform var(--transition-base);
+}
+.switch.is-on .switch__thumb { transform: translateX(16px); }

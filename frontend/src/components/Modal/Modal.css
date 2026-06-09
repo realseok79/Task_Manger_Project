@@ -1,0 +1,44 @@
+/* Doubled class beats the base .modal-content padding regardless of order */
+.modal-content.app-modal {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.app-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-4) var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+.app-modal__title {
+  margin: 0;
+  font-size: var(--fs-md);
+  font-weight: var(--fw-bold);
+  letter-spacing: -0.01em;
+  color: var(--color-text-primary);
+}
+.app-modal__body {
+  padding: var(--space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+/* Shared field row (label + control) used by Settings */
+.app-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.app-field__label {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-primary);
+}
+.app-field__hint {
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+}
