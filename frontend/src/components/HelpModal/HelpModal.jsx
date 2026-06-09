@@ -3,6 +3,7 @@ import { comboLabel } from '../../utils/platform';
 import './HelpModal.css';
 
 const GUIDE = [
+  { t: '명령 팔레트', d: '⌘K로 모든 작업을 검색하고, 어디로든 이동하거나 새 작업을 추가합니다.' },
   { t: '적응형 우선순위', d: '가용 시간·에너지를 설정하면 지금 할 수 있는 작업이 위로 올라옵니다.' },
   { t: '좀비 작업', d: '5번 이상 미뤄진 작업은 빨갛게 강조되고, 보관할지 물어봅니다.' },
   { t: '보기 · 정렬', d: '헤더의 ▦ 아이콘으로 카드/줄 보기를, ↕ 아이콘으로 정렬을 바꿉니다.' },
@@ -10,9 +11,10 @@ const GUIDE = [
 
 export default function HelpModal({ isOpen, onClose }) {
   const shortcuts = [
-    { keys: [comboLabel('K')], desc: '새 작업 추가' },
-    { keys: ['N'], desc: '새 작업 추가 (입력창 밖에서)' },
-    { keys: ['Enter'], desc: '작업 추가 확정' },
+    { keys: [comboLabel('K')], desc: '명령 팔레트 (검색 · 이동 · 추가)' },
+    { keys: ['N'], desc: '새 작업 바로 추가' },
+    { keys: ['↑', '↓'], desc: '팔레트 항목 이동' },
+    { keys: ['Enter'], desc: '선택 · 추가 확정' },
     { keys: ['Esc'], desc: '창 닫기' },
   ];
 

@@ -23,7 +23,7 @@ const IMPORTANCE = [
   { value: 1, label: '매우 낮음' },
 ];
 
-export default function QuickAddModal({ isOpen, onClose, onAdd }) {
+export default function QuickAddModal({ isOpen, onClose, onAdd, initialTitle = '' }) {
   const [title, setTitle] = useState('');
   const [energy, setEnergy] = useState('MEDIUM');
   const [category, setCategory] = useState('업무');
@@ -34,7 +34,7 @@ export default function QuickAddModal({ isOpen, onClose, onAdd }) {
   useEffect(() => {
     if (!isOpen) return undefined;
     // Reset fields, lock scroll, focus title, restore focus on close.
-    setTitle('');
+    setTitle(initialTitle || '');
     setEnergy('MEDIUM');
     setCategory('업무');
     setImportance(3);

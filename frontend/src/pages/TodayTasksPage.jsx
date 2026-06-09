@@ -9,7 +9,6 @@ import { useTasks } from '../hooks/useTasks';
 import { useTimer } from '../hooks/useTimer';
 import { toViewModel } from '../api/tasks';
 import { listContainerVariants, listItemVariants } from '../hooks/useAnimations';
-import { comboLabel } from '../utils/platform';
 import './TodayTasksPage.css';
 
 const TODAY = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
@@ -38,12 +37,13 @@ function computePriority(energy, time) {
   return 'Low';
 }
 
-export default function TodayTasksPage({ composeRequested = false, onComposeHandled, onToast, search = '' }) {
+export default function TodayTasksPage({ composeRequest = null, onComposeHandled, onToast, search = '' }) {
   const q = search.trim().toLowerCase();
   const [timeAvailable, setTimeAvailable] = useState(4.5);
   const [energyLevel, setEnergyLevel] = useState('MEDIUM');
   const [zombieTask, setZombieTask] = useState(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [quickAddTitle, setQuickAddTitle] = useState('');
   const [layout, setLayout] = useState('line'); // 'card' | 'line' — flat list by default
   const [sortMode, setSortMode] = useState('adaptive');
   const [sortOpen, setSortOpen] = useState(false);
@@ -89,13 +89,14 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
     };
   }, [sortOpen]);
 
-  // Open the composer when requested (sidebar button or ⌘K / Ctrl+K / n).
+  // Open the composer when requested (sidebar button, "n", or palette create).
   useEffect(() => {
-    if (composeRequested) {
+    if (composeRequest) {
+      setQuickAddTitle(composeRequest.title || '');
       setQuickAddOpen(true);
       onComposeHandled?.();
     }
-  }, [composeRequested, onComposeHandled]);
+  }, [composeRequest, onComposeHandled]);
 
   const onCardClick = (t) => {
     if (t.isZombie) setZombieTask(t);
@@ -186,10 +187,17 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
         <h2 className="section-label">대기 중인 작업</h2>
 
         {/* Quiet inline trigger — opens the centred composer (no chat bar) */}
-        <button type="button" className="add-trigger" onClick={() => setQuickAddOpen(true)}>
+        <button
+          type="button"
+          className="add-trigger"
+          onClick={() => {
+            setQuickAddTitle('');
+            setQuickAddOpen(true);
+          }}
+        >
           <Plus size={16} aria-hidden="true" />
           <span>새 작업</span>
-          <kbd className="add-trigger__kbd">{comboLabel('K')}</kbd>
+          <kbd className="add-trigger__kbd">N</kbd>
         </button>
 
         {isLoading ? (
@@ -236,6 +244,7 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
 
       <QuickAddModal
         isOpen={quickAddOpen}
+        initialTitle={quickAddTitle}
         onClose={() => setQuickAddOpen(false)}
         onAdd={addTask}
       />

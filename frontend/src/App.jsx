@@ -5,6 +5,7 @@ import TopBar from './components/TopBar/TopBar';
 import Toast from './components/Toast/Toast';
 import SettingsModal from './components/SettingsModal/SettingsModal';
 import HelpModal from './components/HelpModal/HelpModal';
+import CommandPalette from './components/CommandPalette/CommandPalette';
 import TodayTasksPage from './pages/TodayTasksPage';
 import HistoryPage from './pages/HistoryPage';
 import ImportantTasksPage from './pages/ImportantTasksPage';
@@ -16,9 +17,10 @@ import { useNotifications } from './hooks/useNotifications';
  * (theme, notifications, settings/help modals, toast).
  */
 export default function App() {
-  const [page, setPage] = useState('today'); // 'today' | 'important' | 'history'
+  const [page, setPage] = useState('today'); // 'today' | 'important' | 'history' | 'archive'
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [composeRequested, setComposeRequested] = useState(false);
+  const [composeRequest, setComposeRequest] = useState(null); // null | { title }
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   // Theme: 'system' | 'light' | 'dark' (persisted); isDark is derived.
   const [themeMode, setThemeMode] = useState(() => localStorage.getItem('sigma-theme') || 'system');
@@ -67,20 +69,20 @@ export default function App() {
     setDrawerOpen(false);
   };
 
-  const requestCompose = () => {
+  // Land on Today and open the quick-add composer (optionally prefilled).
+  const requestCompose = (title = '') => {
     navigate('today');
-    setComposeRequested(true);
+    setComposeRequest({ title });
   };
 
-  // Global keyboard: ⌘K / Ctrl+K anywhere, plus a bare "n" outside fields.
+  // Global keyboard: ⌘K / Ctrl+K opens the command palette anywhere; a bare "n"
+  // (outside fields) opens the quick-add composer directly.
   useEffect(() => {
     const onKeyDown = (e) => {
       const mod = e.metaKey || e.ctrlKey;
       if (mod && (e.key === 'k' || e.key === 'K')) {
         e.preventDefault();
-        setPage('today');
-        setDrawerOpen(false);
-        setComposeRequested(true);
+        setPaletteOpen(true);
         return;
       }
       const el = e.target;
@@ -88,9 +90,7 @@ export default function App() {
         el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
       if (!mod && !typing && (e.key === 'n' || e.key === 'N')) {
         e.preventDefault();
-        setPage('today');
-        setDrawerOpen(false);
-        setComposeRequested(true);
+        requestCompose('');
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -130,8 +130,8 @@ export default function App() {
           >
             {page === 'today' && (
               <TodayTasksPage
-                composeRequested={composeRequested}
-                onComposeHandled={() => setComposeRequested(false)}
+                composeRequest={composeRequest}
+                onComposeHandled={() => setComposeRequest(null)}
                 onToast={showToast}
                 search={search}
               />
@@ -152,6 +152,16 @@ export default function App() {
         onToggleNotifications={() => setNotificationsEnabled((v) => !v)}
       />
       <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
+      <CommandPalette
+        isOpen={paletteOpen}
+        onClose={() => setPaletteOpen(false)}
+        onNavigate={navigate}
+        onCreate={(title) => requestCompose(title)}
+        onPickTask={(targetPage, title) => {
+          setSearch(title);
+          navigate(targetPage);
+        }}
+      />
       <Toast toast={toast} onClose={() => setToast(null)} />
     </div>
   );

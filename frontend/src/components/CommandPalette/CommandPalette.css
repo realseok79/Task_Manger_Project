@@ -1,0 +1,83 @@
+.cmdk-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh var(--space-4) var(--space-4);
+  background: rgba(15, 15, 25, 0.45);
+}
+.cmdk {
+  width: 100%;
+  max-width: 560px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  overflow: hidden;
+}
+
+.cmdk__input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text-secondary);
+}
+.cmdk__input input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: var(--fs-md);
+  color: var(--color-text-primary);
+}
+.cmdk__input input::placeholder { color: var(--color-text-disabled); }
+
+.cmdk__list {
+  max-height: 360px;
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+.cmdk__empty {
+  padding: var(--space-5);
+  text-align: center;
+  color: var(--color-text-secondary);
+  font-size: var(--fs-sm);
+}
+.cmdk__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-control);
+  cursor: pointer;
+  color: var(--color-text-secondary);
+}
+.cmdk__item.is-sel { background: var(--color-nav-active); }
+.cmdk__item > svg:first-child { flex-shrink: 0; color: var(--color-text-secondary); }
+.cmdk__item.is-sel > svg:first-child { color: var(--color-text-primary); }
+.cmdk__label {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--fs-sm);
+  color: var(--color-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cmdk__hint { font-size: var(--fs-xs); color: var(--color-text-disabled); flex-shrink: 0; }
+.cmdk__tag {
+  flex-shrink: 0;
+  font-size: var(--fs-xs);
+  color: var(--color-text-secondary);
+  background: var(--color-card-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 5px;
+  padding: 1px 7px;
+}
+.cmdk__enter { flex-shrink: 0; color: var(--color-text-disabled); }
