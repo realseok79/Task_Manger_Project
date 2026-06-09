@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, LayoutGrid, Lightbulb, MoreHorizontal, Plus } from 'lucide-react';
+import { ArrowUpDown, LayoutGrid, Plus, Check } from 'lucide-react';
 import TaskCard from '../components/TaskCard/TaskCard';
 import ContextBar from '../components/ContextBar/ContextBar';
 import ZombieModal from '../components/ZombieModal/ZombieModal';
@@ -14,6 +14,20 @@ import './TodayTasksPage.css';
 
 const TODAY = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
 const ENERGY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3 };
+
+const SORTS = [
+  { id: 'adaptive', label: '적응형(기본)' },
+  { id: 'deadline', label: '마감 임박순' },
+  { id: 'importance', label: '중요도순' },
+];
+
+/** Parse a D-day label to a sortable number (overdue first, then nearest). */
+function ddayNum(dday) {
+  if (!dday) return 9999;
+  if (dday === 'D-DAY') return 0;
+  const m = dday.match(/D([+-])(\d+)/);
+  return m ? (m[1] === '-' ? 1 : -1) * Number(m[2]) : 9999;
+}
 
 /** Derive expected priority from energy + available time (per spec). */
 function computePriority(energy, time) {
@@ -30,6 +44,9 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
   const [zombieTask, setZombieTask] = useState(null);
   const [quickAddOpen, setQuickAddOpen] = useState(false);
   const [layout, setLayout] = useState('line'); // 'card' | 'line' — flat list by default
+  const [sortMode, setSortMode] = useState('adaptive');
+  const [sortOpen, setSortOpen] = useState(false);
+  const sortRef = useRef(null);
 
   const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, addTask } = useTasks(energyLevel, timeAvailable);
   const timer = useTimer(0, false); // idle until the user starts focusing
@@ -41,17 +58,33 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
   // The ContextBar drives the list: tasks that fit the current energy/time float
   // up (zombies pinned on top); the rest are de-emphasised, not hidden.
   const minutes = timeAvailable * 60;
-  const pending = useMemo(
-    () =>
-      views
-        .filter((t) => !t.isPriority || t.isZombie)
-        .map((t) => ({
-          ...t,
-          fits: ENERGY_RANK[t.requiredEnergy] <= ENERGY_RANK[energyLevel] && t.estimatedMinutes <= minutes,
-        }))
-        .sort((a, b) => Number(b.isZombie) - Number(a.isZombie) || Number(b.fits) - Number(a.fits)),
-    [views, energyLevel, minutes]
-  );
+  const pending = useMemo(() => {
+    const base = views
+      .filter((t) => !t.isPriority || t.isZombie)
+      .map((t) => ({
+        ...t,
+        fits: ENERGY_RANK[t.requiredEnergy] <= ENERGY_RANK[energyLevel] && t.estimatedMinutes <= minutes,
+      }));
+    if (sortMode === 'deadline') return base.sort((a, b) => ddayNum(a.dday) - ddayNum(b.dday));
+    if (sortMode === 'importance') return base.sort((a, b) => b.importance - a.importance);
+    // adaptive: zombies first, then tasks that fit the current energy/time
+    return base.sort((a, b) => Number(b.isZombie) - Number(a.isZombie) || Number(b.fits) - Number(a.fits));
+  }, [views, energyLevel, minutes, sortMode]);
+
+  // Close the sort menu on outside click / Escape.
+  useEffect(() => {
+    if (!sortOpen) return undefined;
+    const onDown = (e) => {
+      if (sortRef.current && !sortRef.current.contains(e.target)) setSortOpen(false);
+    };
+    const onKey = (e) => e.key === 'Escape' && setSortOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [sortOpen]);
 
   // Open the composer when requested (sidebar button or ⌘K / Ctrl+K / n).
   useEffect(() => {
@@ -73,7 +106,35 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
           <p className="page-subtitle">{TODAY}</p>
         </div>
         <div className="page-header__actions">
-          <button className="icon-btn" aria-label="정렬"><ArrowUpDown size={18} /></button>
+          <div className="header-menu" ref={sortRef}>
+            <button
+              className={`icon-btn ${sortOpen || sortMode !== 'adaptive' ? 'is-active' : ''}`}
+              aria-label="정렬"
+              aria-haspopup="menu"
+              aria-expanded={sortOpen}
+              onClick={() => setSortOpen((o) => !o)}
+            >
+              <ArrowUpDown size={18} />
+            </button>
+            {sortOpen && (
+              <ul className="header-menu__list" role="menu" aria-label="정렬 기준">
+                {SORTS.map((s) => (
+                  <li key={s.id} role="none">
+                    <button
+                      type="button"
+                      role="menuitemradio"
+                      aria-checked={sortMode === s.id}
+                      className={`header-menu__item ${sortMode === s.id ? 'is-selected' : ''}`}
+                      onClick={() => { setSortMode(s.id); setSortOpen(false); }}
+                    >
+                      <span>{s.label}</span>
+                      {sortMode === s.id && <Check size={14} aria-hidden="true" />}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
           <button
             className={`icon-btn ${layout === 'line' ? 'is-active' : ''}`}
             aria-label={layout === 'line' ? '카드 보기로 전환' : '목록 보기로 전환'}
@@ -82,8 +143,6 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
           >
             <LayoutGrid size={18} />
           </button>
-          <button className="icon-btn" aria-label="인사이트"><Lightbulb size={18} /></button>
-          <button className="icon-btn" aria-label="더보기"><MoreHorizontal size={18} /></button>
         </div>
       </header>
 

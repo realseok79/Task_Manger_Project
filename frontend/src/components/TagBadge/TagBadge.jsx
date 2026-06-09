@@ -2,10 +2,10 @@ import { AlarmClock } from 'lucide-react';
 import './TagBadge.css';
 
 /**
- * TagBadge — neutral monospace pill (matches the reference). Pass `tinted` to
- * opt into the category colour system; `deadline` renders the red D-day style.
+ * TagBadge — category label tinted with the semantic 8-colour palette by default
+ * (soft fill + darker text). `deadline` renders the red D-day style.
  */
-export default function TagBadge({ label, category = 'neutral', tinted = false }) {
+export default function TagBadge({ label, category = 'neutral' }) {
   if (category === 'deadline') {
     return (
       <span className="tag-badge tag-badge--deadline">
@@ -14,6 +14,5 @@ export default function TagBadge({ label, category = 'neutral', tinted = false }
       </span>
     );
   }
-  const cls = `tag-badge${tinted ? ` tag-badge--tint-${category}` : ''}`;
-  return <span className={cls}>{label}</span>;
+  return <span className={`tag-badge tag-badge--tint-${category}`}>{label}</span>;
 }

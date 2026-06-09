@@ -1,8 +1,9 @@
-/* Opt-in category tints (default badge stays neutral, per reference). */
-.tag-badge--tint-document { background: var(--tag-document-bg); color: var(--tag-document-fg); }
-.tag-badge--tint-design   { background: var(--tag-design-bg);   color: var(--tag-design-fg); }
-.tag-badge--tint-meeting  { background: var(--tag-meeting-bg);  color: var(--tag-meeting-fg); }
-.tag-badge--tint-dev      { background: var(--tag-dev-bg);      color: var(--tag-dev-fg); }
-.tag-badge--tint-hr       { background: var(--tag-hr-bg);       color: var(--tag-hr-fg); }
-.tag-badge--tint-work     { background: var(--tag-work-bg);     color: var(--tag-work-fg); }
-.tag-badge--tint-personal { background: var(--tag-personal-bg); color: var(--tag-personal-fg); }
+/* Category tints — doubled class beats the base .tag-badge neutral regardless
+   of stylesheet order (same fix as the line layout). */
+.tag-badge.tag-badge--tint-document { background: var(--tag-document-bg); color: var(--tag-document-fg); }
+.tag-badge.tag-badge--tint-design   { background: var(--tag-design-bg);   color: var(--tag-design-fg); }
+.tag-badge.tag-badge--tint-meeting  { background: var(--tag-meeting-bg);  color: var(--tag-meeting-fg); }
+.tag-badge.tag-badge--tint-dev      { background: var(--tag-dev-bg);      color: var(--tag-dev-fg); }
+.tag-badge.tag-badge--tint-hr       { background: var(--tag-hr-bg);       color: var(--tag-hr-fg); }
+.tag-badge.tag-badge--tint-work     { background: var(--tag-work-bg);     color: var(--tag-work-fg); }
+.tag-badge.tag-badge--tint-personal { background: var(--tag-personal-bg); color: var(--tag-personal-fg); }
