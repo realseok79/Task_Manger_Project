@@ -1,10 +1,11 @@
-import { Calendar, Star, Clock, Settings, HelpCircle, Plus } from 'lucide-react';
+import { Calendar, Star, Clock, Archive, Settings, HelpCircle, Plus } from 'lucide-react';
 import './Sidebar.css';
 
 const NAV = [
   { id: 'today', label: '오늘의 작업', Icon: Calendar },
   { id: 'important', label: '중요', Icon: Star },
   { id: 'history', label: '기록', Icon: Clock },
+  { id: 'archive', label: '보관함', Icon: Archive },
 ];
 
 /** Sidebar — brand, primary nav, Add button, secondary links. */

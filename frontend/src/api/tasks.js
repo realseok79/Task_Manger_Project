@@ -109,6 +109,12 @@ export async function getZombieTasks(userId) {
   return data;
 }
 
+export async function getArchivedTasks(userId) {
+  if (USE_MOCK) return mockApi.getArchivedTasks(userId);
+  const { data } = await client.get('/api/tasks', { params: { userId, status: 'ARCHIVED' } });
+  return data;
+}
+
 export async function getCompletedTasks(userId, filter) {
   if (USE_MOCK) return mockApi.getCompletedTasks(userId, filter);
   // Live: logs lack titles, so map best-effort. (Backend limitation noted.)

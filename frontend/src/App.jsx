@@ -8,6 +8,7 @@ import HelpModal from './components/HelpModal/HelpModal';
 import TodayTasksPage from './pages/TodayTasksPage';
 import HistoryPage from './pages/HistoryPage';
 import ImportantTasksPage from './pages/ImportantTasksPage';
+import ArchivePage from './pages/ArchivePage';
 import { useNotifications } from './hooks/useNotifications';
 
 /**
@@ -134,6 +135,7 @@ export default function App() {
             )}
             {page === 'history' && <HistoryPage />}
             {page === 'important' && <ImportantTasksPage onToast={showToast} />}
+            {page === 'archive' && <ArchivePage onToast={showToast} />}
           </motion.div>
         </div>
       </div>

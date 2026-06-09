@@ -197,4 +197,9 @@ export const mockApi = {
     await latency(240);
     return clone(COMPLETED);
   },
+
+  async getArchivedTasks(_userId) {
+    await latency(200);
+    return clone(TASKS.filter((t) => t.status === 'ARCHIVED'));
+  },
 };
