@@ -9,45 +9,46 @@
 
 /* ---- 1. Design Tokens (light theme is the :root default) ---------------- */
 :root {
-  /* Surfaces & structure */
-  --color-primary: #1a1a2e;          /* sidebar bg, primary button bg */
-  --color-primary-hover: #2a2a45;
-  --color-surface: #f0f4ff;          /* app background, light blue-grey */
+  /* Surfaces & structure — warm off-white canvas, hairline borders */
+  --color-primary: #1c1b19;          /* ink: primary button + active state */
+  --color-primary-hover: #34322e;
+  --color-surface: #faf9f7;          /* warm off-white app background */
   --color-card: #ffffff;             /* card background */
-  --color-card-muted: #f7f9fc;       /* completed/disabled card bg */
-  --color-nav-active: #ebebeb;       /* selected sidebar item bg */
-  --color-border: #e6e8f0;           /* hairline borders */
-  --color-border-strong: #c9cede;
+  --color-card-muted: #f5f3ef;       /* completed/disabled card bg */
+  --color-nav-active: #efece6;       /* selected sidebar item bg */
+  --color-border: #e8e5df;           /* warm hairline borders */
+  --color-border-strong: #d7d3ca;
 
-  /* Accents */
-  --color-accent-blue: #1e2a6e;      /* priority left border, dark banner */
-  --color-accent-blue-soft: #e8ecfb; /* tint used behind accent elements */
-  --color-timer-blue: #4a6cf7;       /* timer digits, active slider track */
-  --color-timer-blue-soft: #eaf0ff;
+  /* Accents — monochrome by default; colour is reserved to carry meaning */
+  --color-accent-blue: #1c1b19;      /* priority rail = ink */
+  --color-accent-blue-soft: #f3f1ec; /* warm subtle panel tint */
+  --color-timer-blue: #1c1b19;       /* timer digits / active slider = ink */
+  --color-timer-blue-soft: #f3f1ec;
+  --color-focus: #3b6ef5;            /* keyboard focus ring only */
 
   /* Zombie / danger */
-  --color-zombie-bg: #fff0f0;
-  --color-zombie-accent: #e53e3e;
-  --color-zombie-border: #f5c2c2;
+  --color-zombie-bg: #fdf0ee;
+  --color-zombie-accent: #d6442f;
+  --color-zombie-border: #f3c9c0;
 
-  /* Quote / feature dark block */
-  --color-quote-dark: #1a237e;
+  /* Feature dark block */
+  --color-quote-dark: #1c1b19;
 
-  /* Semantic priority colors (Expected Priority + importance) */
-  --color-priority-critical: #e53e3e;
-  --color-priority-high: #f57f17;
-  --color-priority-medium: #4a6cf7;
-  --color-priority-low: #2e9e5b;
+  /* Semantic priority colours (carry meaning — kept) */
+  --color-priority-critical: #d6442f;
+  --color-priority-high: #d97706;
+  --color-priority-medium: #6f6d68;
+  --color-priority-low: #2f9e44;
 
   /* Status / feedback */
-  --color-success: #2e9e5b;
-  --color-warning: #ed8936;
-  --color-danger: #e53e3e;
+  --color-success: #2f9e44;
+  --color-warning: #d97706;
+  --color-danger: #d6442f;
 
-  /* Text */
-  --color-text-primary: #1a1a2e;
-  --color-text-secondary: #5a607a;
-  --color-text-disabled: #9aa0b8;
+  /* Text — warm near-black at ~90% */
+  --color-text-primary: #1c1b19;
+  --color-text-secondary: #6f6d68;
+  --color-text-disabled: #a8a59d;
   --color-text-inverse: #ffffff;
 
   /* Tag palette — bg + fg per category */
@@ -91,17 +92,18 @@
   --space-10: 40px;
   --space-12: 48px;
 
-  /* Radius */
-  --radius-sm: 6px;     /* tags */
-  --radius-md: 12px;    /* cards */
-  --radius-lg: 16px;    /* modals, panels */
-  --radius-pill: 9999px;
+  /* Radius — low, premium; pills reserved for true pills (slider track) */
+  --radius-sm: 6px;       /* tags */
+  --radius-control: 8px;  /* buttons, inputs, tabs, toggles */
+  --radius-md: 12px;      /* cards */
+  --radius-lg: 14px;      /* modals, panels */
+  --radius-pill: 9999px;  /* slider track only */
 
-  /* Shadows */
-  --shadow-card: 0 2px 8px rgba(0, 0, 0, 0.06);
-  --shadow-card-hover: 0 6px 20px rgba(0, 0, 0, 0.1);
-  --shadow-modal: 0 20px 60px rgba(0, 0, 0, 0.2);
-  --shadow-float: 0 8px 32px rgba(74, 108, 247, 0.2);
+  /* Shadows — barely-there; elevation comes from hairline borders */
+  --shadow-card: 0 1px 2px rgba(28, 27, 25, 0.04);
+  --shadow-card-hover: 0 4px 16px rgba(28, 27, 25, 0.08);
+  --shadow-modal: 0 16px 48px rgba(28, 27, 25, 0.18);
+  --shadow-float: 0 6px 24px rgba(28, 27, 25, 0.14);
 
   /* Motion */
   --transition-fast: 120ms ease;
@@ -117,29 +119,30 @@
 
 /* ---- 1b. Dark theme overrides ------------------------------------------- */
 [data-theme='dark'] {
-  --color-primary: #2a2a45;
-  --color-primary-hover: #36365a;
-  --color-surface: #0f0f13;
-  --color-card: #1a1a2e;
-  --color-card-muted: #15151f;
-  --color-nav-active: #2a2a45;
-  --color-border: #2c2c44;
-  --color-border-strong: #3a3a5a;
+  --color-primary: #f2f0ec;          /* white CTA on dark (Raycast-style) */
+  --color-primary-hover: #ffffff;
+  --color-surface: #0c0c0d;
+  --color-card: #161617;
+  --color-card-muted: #121213;
+  --color-nav-active: #242423;
+  --color-border: #262624;
+  --color-border-strong: #36352f;
 
-  --color-accent-blue: #5b7cff;
-  --color-timer-blue: #7d9bff;
-  --color-timer-blue-soft: #1c2240;
+  --color-accent-blue: #f2f0ec;      /* priority rail = light ink on dark */
+  --color-timer-blue: #f2f0ec;
+  --color-timer-blue-soft: #1a1a18;
+  --color-focus: #5b8cff;
 
-  --color-zombie-bg: #2a1620;
-  --color-zombie-accent: #ff7676;
-  --color-zombie-border: #5a2a3a;
+  --color-zombie-bg: #2a1714;
+  --color-zombie-accent: #f08c78;
+  --color-zombie-border: #5a2c24;
 
-  --color-quote-dark: #11163a;
+  --color-quote-dark: #161617;
 
-  --color-text-primary: #e8eaf6;
-  --color-text-secondary: #a6abc8;
-  --color-text-disabled: #6b7090;
-  --color-text-inverse: #0f0f13;
+  --color-text-primary: #ededeb;
+  --color-text-secondary: #a3a09a;
+  --color-text-disabled: #6e6b64;
+  --color-text-inverse: #0c0c0d;
 
   /* Tags: dim the backgrounds, lift the foregrounds for contrast on dark */
   --tag-document-bg: #16243f;  --tag-document-fg: #7fb0ff;
@@ -205,7 +208,7 @@ ul {
 
 /* Visible, consistent focus ring for keyboard users (a11y baseline) */
 :focus-visible {
-  outline: 2px solid var(--color-timer-blue);
+  outline: 2px solid var(--color-focus);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -276,7 +279,7 @@ ul {
   font-size: var(--fs-base);
   font-weight: var(--fw-semibold);
   padding: 10px 18px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control);
   transition: transform var(--transition-fast), background var(--transition-base),
     box-shadow var(--transition-base);
 }
@@ -336,21 +339,21 @@ ul {
   background: var(--color-card);
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5);
-  border-left: 4px solid var(--color-timer-blue);
+  border: 1px solid var(--color-border);
   box-shadow: var(--shadow-card);
   transition: transform var(--transition-base), box-shadow var(--transition-base),
     background var(--transition-slow);
 }
 
+/* Priority gets a slim ink left accent; the rest are plain hairline rows. */
 .task-card--priority {
-  border-left-color: var(--color-accent-blue);
+  border-left: 3px solid var(--color-primary);
 }
 
 .task-card--zombie {
   background: var(--color-zombie-bg);
-  border-left-color: var(--color-zombie-accent);
   border: 1px solid var(--color-zombie-border);
-  border-left-width: 4px;
+  border-left: 3px solid var(--color-zombie-accent);
 }
 
 /* History rows are flat (no card chrome): a thin left accent + strikethrough. */
@@ -404,7 +407,7 @@ ul {
   position: relative;
   z-index: 1;
   padding: 7px 18px;
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control);
   font-size: var(--fs-sm);
   font-weight: var(--fw-medium);
   color: var(--color-text-secondary);
@@ -422,7 +425,7 @@ ul {
   z-index: 0;
   inset: 0;
   background: var(--color-nav-active);
-  border-radius: var(--radius-pill);
+  border-radius: var(--radius-control);
 }
 
 /* ---- Sidebar nav -------------------------------------------------------- */

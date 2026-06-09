@@ -1,30 +1,19 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowUpDown, LayoutGrid, Lightbulb, MoreHorizontal, Plus, CornerDownLeft } from 'lucide-react';
+import { ArrowUpDown, LayoutGrid, Lightbulb, MoreHorizontal, Plus } from 'lucide-react';
 import TaskCard from '../components/TaskCard/TaskCard';
 import ContextBar from '../components/ContextBar/ContextBar';
 import ZombieModal from '../components/ZombieModal/ZombieModal';
+import QuickAddModal from '../components/QuickAddModal/QuickAddModal';
 import { useTasks } from '../hooks/useTasks';
 import { useTimer } from '../hooks/useTimer';
 import { toViewModel } from '../api/tasks';
 import { listContainerVariants, listItemVariants } from '../hooks/useAnimations';
+import { comboLabel } from '../utils/platform';
 import './TodayTasksPage.css';
 
 const TODAY = new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' });
 const ENERGY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3 };
-const CATEGORIES = ['업무', '개인', '디자인', '문서', '회의', '개발', '인사'];
-const COMPOSER_ENERGY = [
-  { id: 'LOW', label: '낮음' },
-  { id: 'MEDIUM', label: '보통' },
-  { id: 'HIGH', label: '높음' },
-];
-const IMPORTANCE = [
-  { value: 5, label: '매우 높음' },
-  { value: 4, label: '높음' },
-  { value: 3, label: '보통' },
-  { value: 2, label: '낮음' },
-  { value: 1, label: '매우 낮음' },
-];
 
 /** Derive expected priority from energy + available time (per spec). */
 function computePriority(energy, time) {
@@ -35,19 +24,11 @@ function computePriority(energy, time) {
   return 'Low';
 }
 
-export default function TodayTasksPage({ composeSignal = 0 }) {
+export default function TodayTasksPage({ composeRequested = false, onComposeHandled }) {
   const [timeAvailable, setTimeAvailable] = useState(4.5);
   const [energyLevel, setEnergyLevel] = useState('MEDIUM');
-  const [quickInput, setQuickInput] = useState('');
   const [zombieTask, setZombieTask] = useState(null);
-
-  // Composer fields (capture the model the adaptive engine actually needs).
-  const [newCategory, setNewCategory] = useState('업무');
-  const [newEnergy, setNewEnergy] = useState('MEDIUM');
-  const [newImportance, setNewImportance] = useState(3);
-  const [newDeadline, setNewDeadline] = useState('');
-
-  const titleRef = useRef(null);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
 
   const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, addTask } = useTasks(energyLevel, timeAvailable);
   const timer = useTimer(0, false); // idle until the user starts focusing
@@ -71,28 +52,13 @@ export default function TodayTasksPage({ composeSignal = 0 }) {
     [views, energyLevel, minutes]
   );
 
-  // Focus the composer when the sidebar "새 작업 추가" is pressed.
+  // Open the composer when requested (sidebar button or ⌘K / Ctrl+K / n).
   useEffect(() => {
-    if (!composeSignal) return;
-    titleRef.current?.focus();
-    titleRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, [composeSignal]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    const title = quickInput.trim();
-    if (!title) return;
-    addTask({
-      title,
-      estimatedMinutes: 30,
-      requiredEnergy: newEnergy,
-      importance: Number(newImportance),
-      category: newCategory,
-      deadline: newDeadline ? new Date(`${newDeadline}T09:00:00`).toISOString() : undefined,
-    });
-    setQuickInput('');
-    setNewDeadline('');
-  };
+    if (composeRequested) {
+      setQuickAddOpen(true);
+      onComposeHandled?.();
+    }
+  }, [composeRequested, onComposeHandled]);
 
   const onCardClick = (t) => {
     if (t.isZombie) setZombieTask(t);
@@ -103,7 +69,7 @@ export default function TodayTasksPage({ composeSignal = 0 }) {
       <header className="page-header anim-title-in">
         <div>
           <h1 className="page-title">오늘의 작업</h1>
-          <p className="page-subtitle mono">{TODAY}</p>
+          <p className="page-subtitle">{TODAY}</p>
         </div>
         <div className="page-header__actions">
           <button className="icon-btn" aria-label="정렬"><ArrowUpDown size={18} /></button>
@@ -137,6 +103,14 @@ export default function TodayTasksPage({ composeSignal = 0 }) {
       {/* Pending */}
       <section className="pending-block" aria-label="대기 중인 작업">
         <h2 className="section-label">대기 중인 작업</h2>
+
+        {/* Quiet inline trigger — opens the centred composer (no chat bar) */}
+        <button type="button" className="add-trigger" onClick={() => setQuickAddOpen(true)}>
+          <Plus size={16} aria-hidden="true" />
+          <span>새 작업</span>
+          <kbd className="add-trigger__kbd">{comboLabel('K')}</kbd>
+        </button>
+
         {isLoading ? (
           <div className="skeleton-list">
             {[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 72 }} />)}
@@ -175,48 +149,11 @@ export default function TodayTasksPage({ composeSignal = 0 }) {
         }}
       />
 
-      {/* Composer */}
-      <form className="composer" onSubmit={handleSubmit}>
-        <div className="quick-add">
-          <Plus size={18} className="quick-add__icon" aria-hidden="true" />
-          <input
-            ref={titleRef}
-            className="quick-add__input"
-            placeholder="작업 추가..."
-            aria-label="새 작업 제목"
-            value={quickInput}
-            onChange={(e) => setQuickInput(e.target.value)}
-          />
-          <button type="submit" className="btn-primary quick-add__btn">
-            추가 <CornerDownLeft size={15} />
-          </button>
-        </div>
-
-        <div className="composer__options">
-          <label className="composer__field">
-            <span>에너지</span>
-            <select value={newEnergy} onChange={(e) => setNewEnergy(e.target.value)}>
-              {COMPOSER_ENERGY.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-            </select>
-          </label>
-          <label className="composer__field">
-            <span>카테고리</span>
-            <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)}>
-              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
-          </label>
-          <label className="composer__field">
-            <span>중요도</span>
-            <select value={newImportance} onChange={(e) => setNewImportance(e.target.value)}>
-              {IMPORTANCE.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </label>
-          <label className="composer__field">
-            <span>마감</span>
-            <input type="date" value={newDeadline} onChange={(e) => setNewDeadline(e.target.value)} />
-          </label>
-        </div>
-      </form>
+      <QuickAddModal
+        isOpen={quickAddOpen}
+        onClose={() => setQuickAddOpen(false)}
+        onAdd={addTask}
+      />
 
       <ZombieModal
         isOpen={Boolean(zombieTask)}
