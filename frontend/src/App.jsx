@@ -31,6 +31,7 @@ export default function App() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
+  const [search, setSearch] = useState('');
 
   const notifications = useNotifications();
   const shownNotifications = notificationsEnabled ? notifications : [];
@@ -113,9 +114,10 @@ export default function App() {
         <TopBar
           isDarkMode={isDark}
           notifications={shownNotifications}
+          searchValue={search}
           onThemeToggle={() => setThemeMode(isDark ? 'light' : 'dark')}
           onMenu={() => setDrawerOpen((o) => !o)}
-          onSearch={() => {}}
+          onSearch={setSearch}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}
         />
@@ -131,11 +133,12 @@ export default function App() {
                 composeRequested={composeRequested}
                 onComposeHandled={() => setComposeRequested(false)}
                 onToast={showToast}
+                search={search}
               />
             )}
-            {page === 'history' && <HistoryPage />}
-            {page === 'important' && <ImportantTasksPage onToast={showToast} />}
-            {page === 'archive' && <ArchivePage onToast={showToast} />}
+            {page === 'history' && <HistoryPage search={search} />}
+            {page === 'important' && <ImportantTasksPage onToast={showToast} search={search} />}
+            {page === 'archive' && <ArchivePage onToast={showToast} search={search} />}
           </motion.div>
         </div>
       </div>

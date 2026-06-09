@@ -11,8 +11,9 @@ import './TodayTasksPage.css';
  * ImportantTasksPage — high-importance PENDING tasks only (importance >= 4),
  * zombies first then importance descending. A focused list, not a dashboard.
  */
-export default function ImportantTasksPage({ onToast }) {
+export default function ImportantTasksPage({ onToast, search = '' }) {
   const [zombieTask, setZombieTask] = useState(null);
+  const q = search.trim().toLowerCase();
 
   // Energy/time context is irrelevant here; pass wide defaults so nothing is
   // hidden by the (mock-bypassed) hard filter. We slice by importance instead.
@@ -23,8 +24,9 @@ export default function ImportantTasksPage({ onToast }) {
       tasks
         .map(toViewModel)
         .filter((t) => t.importance >= 4)
+        .filter((t) => !q || t.title.toLowerCase().includes(q))
         .sort((a, b) => Number(b.isZombie) - Number(a.isZombie) || b.importance - a.importance),
-    [tasks]
+    [tasks, q]
   );
 
   const onCardClick = (t) => {
@@ -49,7 +51,9 @@ export default function ImportantTasksPage({ onToast }) {
           </div>
         ) : important.length === 0 ? (
           <div className="empty-state">
-            <p className="empty-state__text">지금 중요 표시된 작업이 없습니다.</p>
+            <p className="empty-state__text">
+              {q ? `‘${q}’ 검색 결과가 없어요.` : '지금 중요 표시된 작업이 없습니다.'}
+            </p>
           </div>
         ) : (
           <motion.div className="task-list task-list--line" variants={listContainerVariants} initial="hidden" animate="show">

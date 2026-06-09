@@ -18,9 +18,11 @@ import './ArchivePage.css';
  * the active list or permanently deleted (with a 5s undo). Destination of the
  * archive toast.
  */
-export default function ArchivePage({ onToast }) {
+export default function ArchivePage({ onToast, search = '' }) {
   const [items, setItems] = useState([]); // raw tasks
   const [loading, setLoading] = useState(true);
+  const q = search.trim().toLowerCase();
+  const visible = items.filter((raw) => !q || (raw.title || '').toLowerCase().includes(q));
 
   useEffect(() => {
     let alive = true;
@@ -67,14 +69,16 @@ export default function ArchivePage({ onToast }) {
           <div className="skeleton-list">
             {[0, 1].map((i) => <div key={i} className="skeleton" style={{ height: 52 }} />)}
           </div>
-        ) : items.length === 0 ? (
+        ) : visible.length === 0 ? (
           <div className="empty-state">
-            <p className="empty-state__text">보관한 작업이 없습니다.</p>
+            <p className="empty-state__text">
+              {q ? `‘${q}’ 검색 결과가 없어요.` : '보관한 작업이 없습니다.'}
+            </p>
           </div>
         ) : (
           <motion.div className="archive-list" variants={listContainerVariants} initial="hidden" animate="show">
             <AnimatePresence initial={false}>
-              {items.map((raw) => {
+              {visible.map((raw) => {
                 const t = toViewModel(raw);
                 return (
                   <motion.div

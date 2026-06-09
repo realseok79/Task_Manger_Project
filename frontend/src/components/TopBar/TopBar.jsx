@@ -7,6 +7,7 @@ export default function TopBar({
   placeholder = '작업 검색...',
   isDarkMode,
   notifications = [],
+  searchValue = '',
   onSearch,
   onThemeToggle,
   onMenu,
@@ -45,7 +46,13 @@ export default function TopBar({
 
       <div className="topbar__search">
         <Search size={18} aria-hidden="true" />
-        <input type="search" placeholder={placeholder} aria-label="작업 검색" onChange={(e) => onSearch?.(e.target.value)} />
+        <input
+          type="search"
+          placeholder={placeholder}
+          aria-label="작업 검색"
+          value={searchValue}
+          onChange={(e) => onSearch?.(e.target.value)}
+        />
       </div>
 
       <div className="topbar__actions" ref={ref}>

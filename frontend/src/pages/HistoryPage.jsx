@@ -16,10 +16,11 @@ const TABS = [
 const CATEGORY_CODE = { 문서: 'document', 디자인: 'design', 회의: 'meeting', 개발: 'dev', 인사: 'hr', 업무: 'work', 개인: 'personal' };
 const dateOf = (s) => new Date(`${s}T00:00:00`);
 
-export default function HistoryPage() {
+export default function HistoryPage({ search = '' }) {
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
+  const q = search.trim().toLowerCase();
 
   useEffect(() => {
     let alive = true;
@@ -40,8 +41,9 @@ export default function HistoryPage() {
   );
 
   const filtered = useMemo(() => {
-    if (activeTab === 'all') return items;
-    return items.filter((i) => {
+    const byQuery = items.filter((i) => !q || i.title.toLowerCase().includes(q));
+    if (activeTab === 'all') return byQuery;
+    return byQuery.filter((i) => {
       const d = dateOf(i.date);
       const diffDays = Math.round((refDate - d) / 86400000);
       if (activeTab === 'today') return diffDays === 0;
@@ -49,7 +51,7 @@ export default function HistoryPage() {
       if (activeTab === 'month') return d.getMonth() === refDate.getMonth() && d.getFullYear() === refDate.getFullYear();
       return true;
     });
-  }, [items, activeTab, refDate]);
+  }, [items, activeTab, refDate, q]);
 
   // Group by date, newest first.
   const groups = useMemo(() => {
@@ -96,7 +98,9 @@ export default function HistoryPage() {
         </div>
       ) : groups.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-state__text">해당 기간에 완료된 작업이 없습니다.</p>
+          <p className="empty-state__text">
+            {q ? `‘${q}’ 검색 결과가 없어요.` : '해당 기간에 완료된 작업이 없습니다.'}
+          </p>
         </div>
       ) : (
         groups.map(([date, rows]) => (

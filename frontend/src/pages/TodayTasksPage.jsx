@@ -38,7 +38,8 @@ function computePriority(energy, time) {
   return 'Low';
 }
 
-export default function TodayTasksPage({ composeRequested = false, onComposeHandled, onToast }) {
+export default function TodayTasksPage({ composeRequested = false, onComposeHandled, onToast, search = '' }) {
+  const q = search.trim().toLowerCase();
   const [timeAvailable, setTimeAvailable] = useState(4.5);
   const [energyLevel, setEnergyLevel] = useState('MEDIUM');
   const [zombieTask, setZombieTask] = useState(null);
@@ -52,7 +53,8 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
   const timer = useTimer(0, false); // idle until the user starts focusing
 
   const views = useMemo(() => tasks.map(toViewModel), [tasks]);
-  const priorityTask = views.find((t) => t.isPriority && !t.isZombie);
+  const matchesQuery = (t) => !q || t.title.toLowerCase().includes(q);
+  const priorityTask = views.find((t) => t.isPriority && !t.isZombie && matchesQuery(t));
   const expectedPriority = computePriority(energyLevel, timeAvailable);
 
   // The ContextBar drives the list: tasks that fit the current energy/time float
@@ -61,6 +63,7 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
   const pending = useMemo(() => {
     const base = views
       .filter((t) => !t.isPriority || t.isZombie)
+      .filter((t) => !q || t.title.toLowerCase().includes(q))
       .map((t) => ({
         ...t,
         fits: ENERGY_RANK[t.requiredEnergy] <= ENERGY_RANK[energyLevel] && t.estimatedMinutes <= minutes,
@@ -69,7 +72,7 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
     if (sortMode === 'importance') return base.sort((a, b) => b.importance - a.importance);
     // adaptive: zombies first, then tasks that fit the current energy/time
     return base.sort((a, b) => Number(b.isZombie) - Number(a.isZombie) || Number(b.fits) - Number(a.fits));
-  }, [views, energyLevel, minutes, sortMode]);
+  }, [views, energyLevel, minutes, sortMode, q]);
 
   // Close the sort menu on outside click / Escape.
   useEffect(() => {
@@ -194,7 +197,7 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
             {[0, 1, 2].map((i) => <div key={i} className="skeleton" style={{ height: 72 }} />)}
           </div>
         ) : pending.length === 0 ? (
-          <EmptyState />
+          <EmptyState query={q} />
         ) : (
           <motion.div
             className={`task-list ${layout === 'line' ? 'task-list--line' : ''}`}
@@ -257,10 +260,12 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
   );
 }
 
-function EmptyState() {
+function EmptyState({ query }) {
   return (
     <div className="empty-state">
-      <p className="empty-state__text">오늘 남은 작업이 없습니다.</p>
+      <p className="empty-state__text">
+        {query ? `‘${query}’ 검색 결과가 없어요.` : '오늘 남은 작업이 없습니다.'}
+      </p>
     </div>
   );
 }
