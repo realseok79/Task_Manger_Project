@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { ArrowUpDown, LayoutGrid, Plus, Check } from 'lucide-react';
+import { ArrowUpDown, LayoutGrid, Plus, Check, PictureInPicture2 } from 'lucide-react';
 import TaskCard from '../components/TaskCard/TaskCard';
 import ContextBar from '../components/ContextBar/ContextBar';
 import ZombieModal from '../components/ZombieModal/ZombieModal';
 import QuickAddModal from '../components/QuickAddModal/QuickAddModal';
+import MiniTasks from '../components/MiniTasks/MiniTasks';
 import { useTasks } from '../hooks/useTasks';
 import { useTimer } from '../hooks/useTimer';
 import { toViewModel } from '../api/tasks';
@@ -28,6 +30,31 @@ function ddayNum(dday) {
   return m ? (m[1] === '-' ? 1 : -1) * Number(m[2]) : 9999;
 }
 
+const PIP_SUPPORTED = typeof window !== 'undefined' && 'documentPictureInPicture' in window;
+
+/** Clone the app's stylesheets into a PiP window so the widget is themed. */
+function copyStylesTo(target) {
+  for (const sheet of document.styleSheets) {
+    try {
+      const css = Array.from(sheet.cssRules).map((r) => r.cssText).join('\n');
+      const style = target.document.createElement('style');
+      style.textContent = css;
+      target.document.head.appendChild(style);
+    } catch {
+      if (sheet.href) {
+        const link = target.document.createElement('link');
+        link.rel = 'stylesheet';
+        link.href = sheet.href;
+        target.document.head.appendChild(link);
+      }
+    }
+  }
+  target.document.documentElement.setAttribute(
+    'data-theme',
+    document.documentElement.getAttribute('data-theme') || 'light'
+  );
+}
+
 /** Derive expected priority from energy + available time (per spec). */
 function computePriority(energy, time) {
   const score = ({ LOW: 0, MEDIUM: 1, HIGH: 2 }[energy] ?? 1) + (time >= 5 ? 2 : time >= 2.5 ? 1 : 0);
@@ -48,6 +75,8 @@ export default function TodayTasksPage({ composeRequest = null, onComposeHandled
   const [sortMode, setSortMode] = useState('adaptive');
   const [sortOpen, setSortOpen] = useState(false);
   const sortRef = useRef(null);
+  const [pipWindow, setPipWindow] = useState(null);
+  const pipRef = useRef(null);
 
   const { tasks, isLoading, error, completeTask, snoozeTask, archiveTask, restoreTask, addTask } = useTasks(energyLevel, timeAvailable);
   const timer = useTimer(0, false); // idle until the user starts focusing
@@ -98,6 +127,34 @@ export default function TodayTasksPage({ composeRequest = null, onComposeHandled
     }
   }, [composeRequest, onComposeHandled]);
 
+  // Close the always-on-top mini widget if the page unmounts.
+  useEffect(() => () => pipRef.current?.close?.(), []);
+
+  // Open (or close) a Document Picture-in-Picture window with today's tasks.
+  const toggleMiniWidget = async () => {
+    if (pipRef.current) {
+      pipRef.current.close();
+      return;
+    }
+    if (!PIP_SUPPORTED) {
+      onToast?.('미니 위젯은 Chrome·Edge에서 지원돼요.');
+      return;
+    }
+    try {
+      const w = await window.documentPictureInPicture.requestWindow({ width: 300, height: 420 });
+      copyStylesTo(w);
+      w.document.title = '오늘의 작업';
+      w.addEventListener('pagehide', () => {
+        pipRef.current = null;
+        setPipWindow(null);
+      });
+      pipRef.current = w;
+      setPipWindow(w);
+    } catch {
+      onToast?.('미니 위젯을 열 수 없어요.');
+    }
+  };
+
   const onCardClick = (t) => {
     if (t.isZombie) setZombieTask(t);
   };
@@ -146,6 +203,14 @@ export default function TodayTasksPage({ composeRequest = null, onComposeHandled
             onClick={() => setLayout((l) => (l === 'card' ? 'line' : 'card'))}
           >
             <LayoutGrid size={18} />
+          </button>
+          <button
+            className={`icon-btn ${pipWindow ? 'is-active' : ''}`}
+            aria-label="미니 위젯 (항상 위에 떠 있는 작은 창)"
+            aria-pressed={Boolean(pipWindow)}
+            onClick={toggleMiniWidget}
+          >
+            <PictureInPicture2 size={18} />
           </button>
         </div>
       </header>
@@ -241,6 +306,12 @@ export default function TodayTasksPage({ composeRequest = null, onComposeHandled
           </motion.div>
         )}
       </section>
+
+      {pipWindow &&
+        createPortal(
+          <MiniTasks priorityTask={priorityTask} pending={pending} onComplete={completeTask} />,
+          pipWindow.document.body
+        )}
 
       <QuickAddModal
         isOpen={quickAddOpen}
