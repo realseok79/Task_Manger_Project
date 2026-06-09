@@ -7,11 +7,15 @@ import './MiniTasks.css';
  * so completing here updates the main view too.
  */
 export default function MiniTasks({ priorityTask, pending = [], onComplete }) {
-  const items = [priorityTask, ...pending].filter(Boolean).slice(0, 8);
+  const all = [priorityTask, ...pending].filter(Boolean);
+  const items = all.slice(0, 8);
 
   return (
     <div className="mini">
-      <div className="mini__head">오늘의 작업</div>
+      <div className="mini__head">
+        <span>오늘의 작업</span>
+        {all.length > 0 && <span className="mini__count">남은 {all.length}</span>}
+      </div>
       {items.length === 0 ? (
         <p className="mini__empty">오늘 남은 작업이 없습니다.</p>
       ) : (

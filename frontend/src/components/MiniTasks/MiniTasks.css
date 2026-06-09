@@ -8,11 +8,26 @@
   background: var(--color-surface);
 }
 .mini__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--color-text-secondary);
+}
+.mini__count {
+  letter-spacing: 0;
+  font-weight: 600;
+  font-size: 0.68rem;
+  color: var(--color-text-secondary);
+  background: var(--color-card-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 2px 8px;
+  text-transform: none;
 }
 .mini__empty {
   margin: 0;

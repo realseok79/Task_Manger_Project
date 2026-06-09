@@ -130,20 +130,30 @@ export default function TodayTasksPage({ composeRequest = null, onComposeHandled
   // Close the always-on-top mini widget if the page unmounts.
   useEffect(() => () => pipRef.current?.close?.(), []);
 
-  // Open (or close) a Document Picture-in-Picture window with today's tasks.
+  // Open (or close) the mini widget. Chrome/Edge get a true always-on-top
+  // Document PiP window; other browsers get a small popup parked on the right.
   const toggleMiniWidget = async () => {
     if (pipRef.current) {
       pipRef.current.close();
       return;
     }
-    if (!PIP_SUPPORTED) {
-      onToast?.('미니 위젯은 Chrome·Edge에서 지원돼요.');
-      return;
-    }
     try {
-      const w = await window.documentPictureInPicture.requestWindow({ width: 300, height: 420 });
+      let w;
+      const width = 320;
+      const height = 460;
+      if (PIP_SUPPORTED) {
+        w = await window.documentPictureInPicture.requestWindow({ width, height });
+      } else {
+        const left = Math.max(0, (window.screen?.availWidth || 1280) - width - 24);
+        w = window.open('', 'sigmaMiniWidget', `popup=yes,width=${width},height=${height},left=${left},top=90`);
+        if (!w) {
+          onToast?.('팝업이 차단됐어요. 팝업 허용 후 다시 시도해 주세요.');
+          return;
+        }
+        w.document.body.innerHTML = '';
+      }
       copyStylesTo(w);
-      w.document.title = '오늘의 작업';
+      try { w.document.title = '오늘의 작업'; } catch { /* ignore */ }
       w.addEventListener('pagehide', () => {
         pipRef.current = null;
         setPipWindow(null);
