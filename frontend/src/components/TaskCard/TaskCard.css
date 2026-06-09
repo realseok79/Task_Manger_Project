@@ -147,8 +147,14 @@
   margin-left: auto;
   display: inline-flex;
   align-items: center;
-  gap: var(--space-2);
+  gap: var(--space-3);
   flex-shrink: 0;
+}
+/* Fixed-width, right-anchored D-day slot so badges line up in a column */
+.task-card__dday-slot {
+  display: inline-flex;
+  justify-content: flex-end;
+  min-width: 60px;
 }
 
 /* Out-of-context (doesn't fit current energy/time) — de-emphasised, not hidden */

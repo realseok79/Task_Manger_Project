@@ -89,6 +89,17 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
 
       {error && <div className="page-error" role="alert">{error}</div>}
 
+      {/* Context control — slim, above the list it reorders */}
+      <ContextBar
+        timeAvailable={timeAvailable}
+        energyLevel={energyLevel}
+        expectedPriority={expectedPriority}
+        onChange={({ time, energy }) => {
+          setTimeAvailable(time);
+          setEnergyLevel(energy);
+        }}
+      />
+
       {/* Priority task */}
       {priorityTask && (
         <section className="priority-block anim-section-in" aria-label="최우선 과제">
@@ -152,16 +163,6 @@ export default function TodayTasksPage({ composeRequested = false, onComposeHand
           </motion.div>
         )}
       </section>
-
-      <ContextBar
-        timeAvailable={timeAvailable}
-        energyLevel={energyLevel}
-        expectedPriority={expectedPriority}
-        onChange={({ time, energy }) => {
-          setTimeAvailable(time);
-          setEnergyLevel(energy);
-        }}
-      />
 
       <QuickAddModal
         isOpen={quickAddOpen}

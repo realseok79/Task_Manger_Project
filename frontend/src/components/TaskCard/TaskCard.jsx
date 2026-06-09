@@ -92,11 +92,11 @@ function TaskCard({
           </span>
         )}
         <span className="task-card__line-meta">
+          {scheduledTime && <span className="task-card__sub mono">{scheduledTime}</span>}
           {tags.map((t) => (
             <TagBadge key={t.label} label={t.label} category={t.category} />
           ))}
-          {dday && <TagBadge label={dday} category="deadline" />}
-          {scheduledTime && <span className="task-card__sub mono">{scheduledTime}</span>}
+          {dday && <span className="task-card__dday-slot"><TagBadge label={dday} category="deadline" /></span>}
         </span>
       </div>
     );
