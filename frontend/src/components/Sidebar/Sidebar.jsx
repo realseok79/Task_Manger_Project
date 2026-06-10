@@ -1,20 +1,19 @@
-import { Calendar, Star, Clock, Archive, Settings, HelpCircle, Plus } from 'lucide-react';
+import { Calendar, Star, Clock, Settings, HelpCircle, Plus } from 'lucide-react';
 import './Sidebar.css';
 
 const NAV = [
   { id: 'today', label: '오늘의 작업', Icon: Calendar },
   { id: 'important', label: '중요', Icon: Star },
   { id: 'history', label: '기록', Icon: Clock },
-  { id: 'archive', label: '보관함', Icon: Archive },
 ];
 
 /** Sidebar — brand, primary nav, Add button, secondary links. */
-export default function Sidebar({ activeItem, onNavigate, onAddTask, onOpenSettings, onOpenHelp, isOpen }) {
+export default function Sidebar({ activeItem, onNavigate, onAddTask, onOpenSettings, onOpenHelp, isOpen, username = '적응형 할 일' }) {
   return (
     <aside className={`sidebar anim-sidebar-in ${isOpen ? 'sidebar--open' : ''}`} aria-label="주요 메뉴">
       <div className="sidebar__brand">
         <span className="sidebar__logo">SIGMA</span>
-        <span className="sidebar__tagline sidebar__labels">적응형 할 일</span>
+        <span className="sidebar__tagline sidebar__labels">{username}</span>
       </div>
 
       <nav className="sidebar__nav" aria-label="페이지 이동">

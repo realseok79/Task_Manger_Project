@@ -1,0 +1,45 @@
+.notif-bell { position: relative; display: inline-flex; }
+
+/* 미읽음 배지 — 기존 D-숫자 배지와 같은 빨강 계열/필 형태 */
+.notif-bell__btn { position: relative; }
+.notif-bell__badge {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: var(--fw-bold);
+  line-height: 1;
+  color: #fff;
+  background: var(--color-danger, #e24b4a);
+  border: 2px solid var(--color-surface);
+  border-radius: var(--radius-pill);
+  transform: translate(35%, -35%);
+  animation: notif-badge-pop 0.18s ease-out;
+}
+
+/* 로딩 dim + 펄스 */
+.notif-bell__btn.is-loading { opacity: 0.55; }
+.notif-bell__pulse {
+  position: absolute;
+  top: 4px; right: 4px;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-text-disabled);
+  animation: notif-pulse 1s ease-in-out infinite;
+}
+
+.notif-bell__dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 1000;
+}
+
+@keyframes notif-badge-pop { from { transform: translate(35%, -35%) scale(0); } to { transform: translate(35%, -35%) scale(1); } }
+@keyframes notif-pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }

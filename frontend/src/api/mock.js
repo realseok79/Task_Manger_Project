@@ -1,16 +1,6 @@
 /**
  * In-memory mock backend.
  * Expert 6: Backend Integration Lead
- *
- * Mirrors the real Spring Boot contract exactly:
- *   TaskResponse { taskId, title, description, estimatedMinutes, deadline,
- *                  requiredEnergy, importance, status, delayCount, createdAt }
- *   ZombieTaskResponse { zombieTasks[], explorationModeFlag }
- *
- * It additionally carries a few UI-only fields (category, scheduledTime,
- * delayedFrom, isPriority) as a *superset*. The real API doesn't return those;
- * the view-model mapper (api/tasks.js) treats them as optional and degrades
- * gracefully when talking to the live backend.
  */
 
 const now = new Date();
@@ -29,7 +19,6 @@ let TASKS = [
     status: 'PENDING',
     delayCount: 0,
     createdAt: inDays(-3),
-    // UI-only
     category: '업무',
     isPriority: true,
   },
@@ -103,8 +92,7 @@ let TASKS = [
   },
 ];
 
-// Completed history view models (the live /api/logs endpoint omits titles, so
-// the mock provides the richer shape the History screen renders).
+// Completed history view models
 const COMPLETED = [
   { taskId: 101, title: 'Q2 분기별 성과 보고서 초안 작성', category: '문서', completedAt: '오후 4:30', date: '2024-05-24' },
   { taskId: 102, title: '디자인 시스템 컬러 토큰 검토 및 업데이트', category: '디자인', completedAt: '오후 2:15', date: '2024-05-24' },
@@ -113,18 +101,44 @@ const COMPLETED = [
   { taskId: 105, title: '신규 온보딩 프로세스 가이드 정리', category: '인사', completedAt: '오전 09:12', date: '2024-05-23' },
 ];
 
+// 밀린 Task 알림(notifications) 시드
+let NOTIFICATIONS = [
+  {
+    id: 'n-1', task_id: 2, type: 'OVERDUE_1DAY', overdue_days: 1,
+    message: '마케팅 캠페인 시안 리뷰가 하루 미뤄졌습니다.',
+    is_read: false, is_dismissed: false, action_taken: 'NONE',
+    service_date: now.toISOString().slice(0, 10), created_at: inDays(0),
+  },
+  {
+    id: 'n-2', task_id: 3, type: 'OVERDUE_2DAY', overdue_days: 2,
+    message: '개인 사이드 프로젝트 코드 클린업이 이틀 지났습니다.',
+    is_read: false, is_dismissed: false, action_taken: 'NONE',
+    service_date: now.toISOString().slice(0, 10), created_at: inDays(0),
+  },
+  {
+    id: 'n-3', task_id: 4, type: 'DELETE_CONFIRM', overdue_days: 4,
+    message: '정기 구독 서비스 결제 수단 갱신을 투두리스트에서 없앨까요?',
+    is_read: false, is_dismissed: false, action_taken: 'NONE',
+    service_date: now.toISOString().slice(0, 10), created_at: inDays(0),
+  },
+];
+
 const ENERGY_RANK = { LOW: 1, MEDIUM: 2, HIGH: 3 };
 const latency = (ms = 280) => new Promise((r) => setTimeout(r, ms));
 const clone = (v) => JSON.parse(JSON.stringify(v));
 let nextId = 1000;
 
+// 가용시간(초) — 오늘 설정값 + 조기완료 환급 원장
+let AVAILABLE_SECONDS = 6 * 3600;
+let REFUNDS = [];
+const estSecondsOf = (t) => t.estimatedDuration ?? (t.estimatedMinutes || 0) * 60;
+const allocatedSeconds = () =>
+  TASKS.filter((t) => t.status === 'PENDING').reduce((a, t) => a + estSecondsOf(t), 0);
+
 // ---- Mock operations (same signatures the real api/tasks.js exposes) ------
 export const mockApi = {
   async getTasks(_userId, energy, minutes) {
     await latency();
-    // Hard-constraint filter, mirroring the backend: requiredEnergy <= current
-    // energy AND estimatedMinutes <= available minutes, PENDING only,
-    // ordered by deadline ascending.
     const cap = ENERGY_RANK[energy] ?? 3;
     return clone(
       TASKS.filter(
@@ -136,9 +150,6 @@ export const mockApi = {
     );
   },
 
-  // Today screen wants the full PENDING list regardless of the slider, so the
-  // hard filter above doesn't hide the priority/zombie cards. The page uses
-  // this; getTasks remains available to demo the real filtering endpoint.
   async getAllPending(_userId) {
     await latency(200);
     return clone(TASKS.filter((t) => t.status === 'PENDING'));
@@ -165,17 +176,18 @@ export const mockApi = {
 
   async updateTaskStatus(taskId, action) {
     await latency(180);
+    // 표시상태 전이(START/PAUSE/RESUME/FINISH) → 표시 status 반환(TaskStore 가 sync 에 사용)
+    const DISPLAY = { START: 'ACTIVE', PAUSE: 'PAUSED', RESUME: 'ACTIVE', FINISH: 'COMPLETED' };
+    const same = (a, b) => String(a) === String(b);
     TASKS = TASKS.map((t) => {
-      if (t.taskId !== taskId) return t;
-      if (action === 'COMPLETE') return { ...t, status: 'COMPLETED' };
+      if (!same(t.taskId, taskId)) return t;
+      if (action === 'COMPLETE' || action === 'FINISH') return { ...t, status: 'COMPLETED' };
       if (action === 'ARCHIVE') return { ...t, status: 'ARCHIVED' };
       if (action === 'RESTORE') return { ...t, status: 'PENDING' }; // undo archive
-
-      // SNOOZE: keep it visible in "today" but bump the delay counter so it can
-      // graduate to a zombie at 5.
       if (action === 'SNOOZE') return { ...t, delayCount: t.delayCount + 1 };
       return t;
     });
+    if (DISPLAY[action]) return { ok: true, taskId, status: DISPLAY[action] };
     return { ok: true };
   },
 
@@ -214,5 +226,111 @@ export const mockApi = {
     await latency(160);
     if (!TASKS.some((t) => t.taskId === task.taskId)) TASKS = [...TASKS, task];
     return clone(task);
+  },
+
+  // ---- Notifications (밀린 Task 알림) ----
+  async getNotifications(_userId, unreadOnly = false, { cursor = null, limit = 50 } = {}) {
+    await latency(180);
+    const all = NOTIFICATIONS
+      .filter((n) => !n.is_dismissed && (!unreadOnly || !n.is_read))
+      .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+    const start = cursor ? all.filter((n) => new Date(n.created_at) < new Date(cursor)) : all;
+    const page = start.slice(0, limit);
+    const unreadCount = NOTIFICATIONS.filter((n) => !n.is_dismissed && !n.is_read).length;
+    const nextCursor = page.length === limit && page.length < start.length ? page[page.length - 1].created_at : null;
+    return { notifications: clone(page), unreadCount, nextCursor };
+  },
+
+  async markNotificationRead(id) {
+    await latency(120);
+    NOTIFICATIONS = NOTIFICATIONS.map((n) => (n.id === id ? { ...n, is_read: true, read_at: new Date().toISOString() } : n));
+    return { ok: true };
+  },
+
+  async dismissNotification(id) {
+    await latency(120);
+    NOTIFICATIONS = NOTIFICATIONS.map((n) => (n.id === id ? { ...n, is_dismissed: true } : n));
+    return { ok: true };
+  },
+
+  async resolveDeleteConfirm(taskId, action) {
+    await latency(160);
+    NOTIFICATIONS = NOTIFICATIONS.map((n) =>
+      n.task_id === taskId && !n.is_dismissed
+        ? { ...n, is_dismissed: true, action_taken: action === 'COMPLETE' ? 'COMPLETED' : 'DELETED' }
+        : n
+    );
+    TASKS = TASKS.map((t) =>
+      t.taskId === taskId ? { ...t, status: action === 'COMPLETE' ? 'COMPLETED' : 'ARCHIVED' } : t
+    );
+    return { ok: true };
+  },
+
+  // ---- 가용시간 / 소요시간 ----
+  async getAvailableTime(_userId) {
+    await latency(120);
+    const allocated = allocatedSeconds();
+    const consumed = 0;
+    const refunded = REFUNDS.reduce((a, b) => a + b, 0);
+    const total = AVAILABLE_SECONDS;
+    const remaining = total - allocated - consumed;
+    return {
+      total_available: total,
+      allocated,
+      consumed,
+      refunded,
+      remaining,
+      can_create_task: remaining > 0,
+      tasks_breakdown: TASKS.filter((t) => t.status === 'PENDING').map((t) => ({
+        task_id: t.taskId, title: t.title, estimated_duration: estSecondsOf(t), status: t.status,
+      })),
+    };
+  },
+
+  async createTaskWithBudget(data) {
+    await latency(200);
+    const dur = Number(data.estimated_duration);
+    const remaining = AVAILABLE_SECONDS - allocatedSeconds();
+    if (dur > remaining) {
+      throw {
+        status: 409, code: 'INSUFFICIENT_AVAILABLE_TIME', message: '당신에게 남은 가용시간이 부족합니다',
+        remaining_seconds: remaining, requested_seconds: dur,
+      };
+    }
+    // 최우선 과제 단일성 2차 검증(서버측)
+    if (data.isPriority &&
+        TASKS.some((t) => (t.isPriority || t.importance >= 5) && t.status !== 'COMPLETED' && t.status !== 'ARCHIVED')) {
+      throw { status: 409, code: 'PRIORITY_EXISTS', message: '최우선 과제가 이미 존재합니다!!' };
+    }
+    const created = {
+      taskId: ++nextId, title: data.title, description: data.description ?? '',
+      estimatedMinutes: Math.round(dur / 60), estimatedDuration: dur,
+      deadline: data.deadline ?? inDays(3), requiredEnergy: data.requiredEnergy ?? 'MEDIUM',
+      importance: data.importance ?? 3, status: 'PENDING', delayCount: 0,
+      isPriority: Boolean(data.isPriority),
+      createdAt: new Date().toISOString(), category: data.category ?? '업무',
+    };
+    TASKS = [created, ...TASKS];
+    return clone(created);
+  },
+
+  async completeTaskWithRefund(taskId, elapsedSeconds) {
+    await latency(160);
+    const t = TASKS.find((x) => x.taskId === taskId);
+    const estSec = t ? estSecondsOf(t) : 0;
+    const refund = Math.max(0, estSec - elapsedSeconds);
+    if (refund > 0) REFUNDS.push(refund);
+    TASKS = TASKS.map((x) => (x.taskId === taskId ? { ...x, status: 'COMPLETED' } : x));
+    return { task_id: taskId, status: 'COMPLETED', elapsed_time: elapsedSeconds, refunded_seconds: refund };
+  },
+
+  async setAvailableTime(_userId, seconds, _date) {
+    await latency(120);
+    const allocated = allocatedSeconds();
+    if (seconds < allocated) {
+      throw { status: 400, code: 'AVAILABLE_BELOW_ALLOCATED', message: '이미 할당된 작업 시간보다 작게 설정할 수 없습니다.', allocated_seconds: allocated };
+    }
+    AVAILABLE_SECONDS = seconds;
+    return { available_seconds: seconds, allocated };
   },
 };

@@ -109,7 +109,7 @@ export function useTasks(energyLevel, timeAvailable, userId = DEFAULT_USER_ID) {
         delayCount: 0,
         category: partial.category ?? '업무',
       };
-      setTasks((list) => [...list, optimistic]);
+      setTasks((list) => [optimistic, ...list]);
       try {
         const created = await apiCreate({ userId, ...partial });
         setTasks((list) => list.map((t) => (t.taskId === optimistic.taskId ? created : t)));

@@ -1,0 +1,136 @@
+/* 공용 모달 스타일 (AddTaskModal / SettingsModal 공유). 기존 디자인 토큰만 사용. */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4);
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+  animation: modal-fade 0.15s ease-out;
+}
+
+.modal-panel {
+  width: 100%;
+  max-width: 460px;
+  max-height: 90vh;
+  overflow-y: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-modal);
+  animation: modal-pop 0.16s ease-out;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.modal-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-semibold);
+  color: var(--color-text-primary);
+}
+
+.modal-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+.modal-close:hover { background: var(--color-card-muted); color: var(--color-text-primary); }
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-5);
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+/* ---- Fields ---- */
+.field { display: flex; flex-direction: column; gap: var(--space-2); flex: 1; }
+.field__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--color-text-secondary);
+}
+.field__req { color: var(--color-danger); font-style: normal; }
+.field__hint { color: var(--color-text-disabled); font-weight: var(--fw-regular); }
+
+.field__input,
+.field__textarea {
+  width: 100%;
+  padding: var(--space-3);
+  font-size: var(--fs-base);
+  font-family: inherit;
+  color: var(--color-text-primary);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  outline: none;
+  transition: var(--transition-base);
+}
+.field__input:focus,
+.field__textarea:focus { border-color: var(--color-primary); }
+.field__input--error { border-color: var(--color-danger); }
+.field__textarea { resize: vertical; min-height: 64px; }
+.field__error { font-size: var(--fs-xs); color: var(--color-danger); }
+.field__range { width: 100%; accent-color: var(--color-primary); }
+
+.field-row { display: flex; gap: var(--space-4); }
+
+/* ---- Toggle switch ---- */
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  flex: 0 0 auto;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--color-border-strong);
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+.toggle[aria-checked='true'] { background: var(--color-primary); }
+.toggle::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: var(--transition-base);
+}
+.toggle[aria-checked='true']::after { transform: translateX(18px); }
+
+@keyframes modal-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes modal-pop { from { opacity: 0; transform: translateY(8px) scale(0.98); } to { opacity: 1; transform: none; } }

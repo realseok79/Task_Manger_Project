@@ -45,9 +45,17 @@
   --color-warning: #d97706;
   --color-danger: #d6442f;
 
+  /* Danger banner surface (priority-blocked chip) — deep coral, reads on both themes */
+  --color-background-danger: #4a1b0c;  /* coral-900 */
+  --color-danger-border: #993c1d;      /* coral-600 */
+  --color-danger-title: #ffd9cf;       /* coral-100 */
+  --color-danger-detail: #e8a99c;      /* coral-200 */
+  --color-danger-icon: #f0a48c;        /* coral-200 */
+
   /* Text — warm near-black at ~90% */
   --color-text-primary: #1c1b19;
   --color-text-secondary: #6f6d68;
+  --color-text-tertiary: #b4b2a9;      /* muted gray — empty-state hints, captions */
   --color-text-disabled: #a8a59d;
   --color-text-inverse: #ffffff;
 
@@ -141,8 +149,12 @@
 
   --color-text-primary: #ededeb;
   --color-text-secondary: #a3a09a;
+  --color-text-tertiary: #7d7a73;     /* dark: lift muted gray for contrast on #0c0c0d */
   --color-text-disabled: #6e6b64;
   --color-text-inverse: #0c0c0d;
+
+  /* Danger chip stays the same deep coral (already reads on dark); icon lifted a touch */
+  --color-danger-icon: #f3b6a2;
 
   /* Tags: dim the backgrounds, lift the foregrounds for contrast on dark */
   --tag-document-bg: #16243f;  --tag-document-fg: #7fb0ff;

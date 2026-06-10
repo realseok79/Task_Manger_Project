@@ -1,0 +1,42 @@
+.empty-state-full {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;            /* 부모 높이 안에서 수직 중앙 */
+  text-align: center;
+  min-height: 320px;
+  padding: var(--space-8) var(--space-4);
+}
+
+.empty-state-full__art {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;                        /* 스펙: 80×80 */
+  height: 80px;
+  border-radius: 50%;
+  color: var(--color-text-tertiary);  /* muted gray */
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+}
+
+.empty-state-full__title {
+  margin: var(--space-4) 0 0;
+  font-size: 16px;                    /* 스펙: 제목 16px / 500 */
+  font-weight: var(--fw-medium);
+  color: var(--color-text-secondary);
+}
+
+.empty-state-full__subtitle {
+  margin: 4px 0 0;                    /* 스펙: margin-top 4px */
+  font-size: 13px;                    /* 스펙: 보조 13px / 400 */
+  font-weight: var(--fw-regular);
+  color: var(--color-text-tertiary);
+}
+
+.empty-state-full__cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);         /* 스펙: CTA margin-top 20px */
+}

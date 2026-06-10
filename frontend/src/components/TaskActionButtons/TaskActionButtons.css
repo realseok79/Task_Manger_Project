@@ -1,0 +1,70 @@
+.task-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);   /* 8px */
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+/* OVERDUE: 버튼 영역을 카드 배경보다 살짝 밝게(스펙 ②) */
+.task-actions--overdue {
+  padding: 4px;
+  border-radius: var(--radius-control);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+/* 기본: height 30 · font 12 · radius 6 · 클릭 시 scale(0.97) */
+.ta-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 30px;
+  padding: 0 12px;
+  font-size: 12px;
+  font-weight: var(--fw-medium);
+  font-family: inherit;
+  white-space: nowrap;
+  color: var(--color-text-primary);
+  background: transparent;
+  border: 1px solid var(--color-border-strong);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-fast);  /* 120ms — 버튼 hover/press 는 빠르게 */
+}
+.ta-btn:active { transform: scale(0.97); }
+.ta-btn__prefix { font-size: 10px; line-height: 1; }
+
+/* 시작하기 (IDLE) — 파란 outline #378ADD */
+.ta-btn--start { color: #378add; border-color: #378add; }
+.ta-btn--start:hover { background: #eaf2fc; }
+
+/* 이어서 시작하기 — teal outline #1D9E75 */
+.ta-btn--resume { color: #1d9e75; border-color: #1d9e75; }
+.ta-btn--resume:hover { background: #e1f5ee; }
+
+/* 중지 — gray outline #888780 */
+.ta-btn--pause { color: #888780; border-color: #888780; }
+.ta-btn--pause:hover { background: #f1efe8; }
+
+/* 끝내기 — blue filled #185FA5 */
+.ta-btn--finish {
+  color: #fff;
+  background: #185fa5;
+  border-color: #185fa5;
+  font-weight: var(--fw-medium);
+}
+.ta-btn--finish:hover { background: #0c447c; border-color: #0c447c; }
+
+/* ── 다크 테마 대응: 어두운 배경(#0c0c0d) 위 대비 확보 ───────────────── */
+[data-theme='dark'] .ta-btn--start { color: #5b9ee6; border-color: #3c6da8; }
+[data-theme='dark'] .ta-btn--start:hover { background: #16243f; }
+[data-theme='dark'] .ta-btn--resume { color: #3fc093; border-color: #2c7d5f; }
+[data-theme='dark'] .ta-btn--resume:hover { background: #102a22; }
+[data-theme='dark'] .ta-btn--pause { color: #a3a09a; border-color: #4a4944; }
+[data-theme='dark'] .ta-btn--pause:hover { background: #1b1b1a; }
+[data-theme='dark'] .ta-btn--finish { background: #2f74c0; border-color: #2f74c0; }
+[data-theme='dark'] .ta-btn--finish:hover { background: #185fa5; border-color: #185fa5; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ta-btn:active { transform: none; }
+}

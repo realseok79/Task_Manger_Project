@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Search, Moon, Sun, Bell, User, Menu, AlertTriangle, Clock, Settings, HelpCircle } from 'lucide-react';
+import NotificationBell from '../NotificationBell/NotificationBell';
 import './TopBar.css';
 
 /** TopBar — search, theme toggle, notifications popover, profile menu. */
@@ -7,12 +8,12 @@ export default function TopBar({
   placeholder = '작업 검색...',
   isDarkMode,
   notifications = [],
-  searchValue = '',
   onSearch,
   onThemeToggle,
   onMenu,
   onOpenSettings,
   onOpenHelp,
+  notification,
 }) {
   const [openMenu, setOpenMenu] = useState(null); // 'notif' | 'profile' | null
   const ref = useRef(null);
@@ -46,13 +47,7 @@ export default function TopBar({
 
       <div className="topbar__search">
         <Search size={18} aria-hidden="true" />
-        <input
-          type="search"
-          placeholder={placeholder}
-          aria-label="작업 검색"
-          value={searchValue}
-          onChange={(e) => onSearch?.(e.target.value)}
-        />
+        <input type="search" placeholder={placeholder} aria-label="작업 검색" onChange={(e) => onSearch?.(e.target.value)} />
       </div>
 
       <div className="topbar__actions" ref={ref}>
@@ -66,18 +61,21 @@ export default function TopBar({
           {isDarkMode ? <Sun size={20} /> : <Moon size={20} />}
         </button>
 
-        <div className="topbar__pop">
-          <button
-            type="button"
-            className={`icon-btn topbar__bell ${openMenu === 'notif' ? 'is-active' : ''}`}
-            onClick={() => toggle('notif')}
-            aria-label={hasNotif ? '읽지 않은 알림 있음' : '알림'}
-            aria-haspopup="menu"
-            aria-expanded={openMenu === 'notif'}
-          >
-            <Bell size={20} />
-            {hasNotif && <span className="topbar__dot" aria-hidden="true" />}
-          </button>
+        {notification ? (
+          <NotificationBell {...notification} />
+        ) : (
+          <div className="topbar__pop">
+            <button
+              type="button"
+              className={`icon-btn topbar__bell ${openMenu === 'notif' ? 'is-active' : ''}`}
+              onClick={() => toggle('notif')}
+              aria-label={hasNotif ? '읽지 않은 알림 있음' : '알림'}
+              aria-haspopup="menu"
+              aria-expanded={openMenu === 'notif'}
+            >
+              <Bell size={20} />
+              {hasNotif && <span className="topbar__dot" aria-hidden="true" />}
+            </button>
           {openMenu === 'notif' && (
             <div className="topbar-menu topbar-menu--notif" role="menu" aria-label="알림">
               <div className="topbar-menu__head">알림</div>
@@ -101,6 +99,7 @@ export default function TopBar({
             </div>
           )}
         </div>
+        )}
 
         <div className="topbar__pop">
           <button

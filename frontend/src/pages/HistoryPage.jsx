@@ -4,6 +4,7 @@ import SummaryBar from '../components/SummaryBar/SummaryBar';
 import FilterTabs from '../components/FilterTabs/FilterTabs';
 import TaskCard from '../components/TaskCard/TaskCard';
 import { getCompletedTasks } from '../api/tasks';
+import { loadCompleted } from '../lib/storage';
 import './HistoryPage.css';
 
 const TABS = [
@@ -16,19 +17,20 @@ const TABS = [
 const CATEGORY_CODE = { 문서: 'document', 디자인: 'design', 회의: 'meeting', 개발: 'dev', 인사: 'hr', 업무: 'work', 개인: 'personal' };
 const dateOf = (s) => new Date(`${s}T00:00:00`);
 
-export default function HistoryPage({ search = '' }) {
+export default function HistoryPage() {
   const [items, setItems] = useState([]);
   const [activeTab, setActiveTab] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
-  const q = search.trim().toLowerCase();
 
   useEffect(() => {
     let alive = true;
-    getCompletedTasks().then((data) => {
-      if (alive) {
-        setItems(data);
-        setIsLoading(false);
-      }
+    getCompletedTasks().then((remote) => {
+      if (!alive) return;
+      // 로컬에서 방금 '끝내기'한 작업(실제 제목)을 우선하고, 백엔드 결과를 taskId로 중복 제거해 병합.
+      const local = loadCompleted();
+      const seen = new Set(local.map((i) => i.taskId));
+      setItems([...local, ...remote.filter((r) => !seen.has(r.taskId))]);
+      setIsLoading(false);
     });
     return () => { alive = false; };
   }, []);
@@ -41,9 +43,8 @@ export default function HistoryPage({ search = '' }) {
   );
 
   const filtered = useMemo(() => {
-    const byQuery = items.filter((i) => !q || i.title.toLowerCase().includes(q));
-    if (activeTab === 'all') return byQuery;
-    return byQuery.filter((i) => {
+    if (activeTab === 'all') return items;
+    return items.filter((i) => {
       const d = dateOf(i.date);
       const diffDays = Math.round((refDate - d) / 86400000);
       if (activeTab === 'today') return diffDays === 0;
@@ -51,7 +52,7 @@ export default function HistoryPage({ search = '' }) {
       if (activeTab === 'month') return d.getMonth() === refDate.getMonth() && d.getFullYear() === refDate.getFullYear();
       return true;
     });
-  }, [items, activeTab, refDate, q]);
+  }, [items, activeTab, refDate]);
 
   // Group by date, newest first.
   const groups = useMemo(() => {
@@ -98,9 +99,7 @@ export default function HistoryPage({ search = '' }) {
         </div>
       ) : groups.length === 0 ? (
         <div className="empty-state">
-          <p className="empty-state__text">
-            {q ? `‘${q}’ 검색 결과가 없어요.` : '해당 기간에 완료된 작업이 없습니다.'}
-          </p>
+          <p className="empty-state__text">해당 기간에 완료된 작업이 없습니다.</p>
         </div>
       ) : (
         groups.map(([date, rows]) => (

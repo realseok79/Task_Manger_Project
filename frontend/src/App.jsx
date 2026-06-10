@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import Sidebar from './components/Sidebar/Sidebar';
 import TopBar from './components/TopBar/TopBar';
 import Toast from './components/Toast/Toast';
@@ -11,6 +11,7 @@ import HistoryPage from './pages/HistoryPage';
 import ImportantTasksPage from './pages/ImportantTasksPage';
 import ArchivePage from './pages/ArchivePage';
 import { useNotifications } from './hooks/useNotifications';
+import NotificationToastHost from './components/NotificationToast/NotificationToast';
 
 /**
  * App shell — sidebar + topbar + routed page area, plus app-level chrome
@@ -35,8 +36,23 @@ export default function App() {
   const toastTimer = useRef(null);
   const [search, setSearch] = useState('');
 
-  const notifications = useNotifications();
-  const shownNotifications = notificationsEnabled ? notifications : [];
+  const [toasts, setToasts] = useState([]);
+  const [scrollTaskId, setScrollTaskId] = useState(null);
+
+  // 실시간 알림 수신 -> 우하단 토스트 생성
+  const notify = useNotifications({
+    onIncoming: (n) => {
+      if (notificationsEnabled) {
+        setToasts((ts) => [...ts, { id: n.id, type: n.type, message: n.message, task_id: n.task_id }]);
+      }
+    },
+  });
+
+  const navigateToTask = (taskId) => {
+    setPage('today');
+    setDrawerOpen(false);
+    setScrollTaskId(taskId);
+  };
 
   useEffect(() => {
     localStorage.setItem('sigma-theme', themeMode);
@@ -113,7 +129,19 @@ export default function App() {
       <div className="app-main">
         <TopBar
           isDarkMode={isDark}
-          notifications={shownNotifications}
+          notification={{
+            items: notify.items,
+            unreadCount: notify.unreadCount,
+            isLoading: notify.isLoading,
+            hasMore: notify.hasMore,
+            isLoadingMore: notify.isLoadingMore,
+            onLoadMore: notify.loadMore,
+            onMarkAllRead: notify.markAllRead,
+            onMarkRead: notify.markRead,
+            onDismiss: notify.dismiss,
+            onResolve: notify.resolveDelete,
+            onNavigate: navigateToTask,
+          }}
           searchValue={search}
           onThemeToggle={() => setThemeMode(isDark ? 'light' : 'dark')}
           onMenu={() => setDrawerOpen((o) => !o)}
@@ -122,24 +150,29 @@ export default function App() {
           onOpenHelp={() => setHelpOpen(true)}
         />
         <div className="page-content">
-          <motion.div
-            key={page}
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.2 }}
-          >
-            {page === 'today' && (
-              <TodayTasksPage
-                composeRequest={composeRequest}
-                onComposeHandled={() => setComposeRequest(null)}
-                onToast={showToast}
-                search={search}
-              />
-            )}
-            {page === 'history' && <HistoryPage search={search} />}
-            {page === 'important' && <ImportantTasksPage onToast={showToast} search={search} />}
-            {page === 'archive' && <ArchivePage onToast={showToast} search={search} />}
-          </motion.div>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={page}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              transition={{ duration: 0.2 }}
+            >
+              {page === 'today' && (
+                <TodayTasksPage
+                  composeRequest={composeRequest}
+                  onComposeHandled={() => setComposeRequest(null)}
+                  onToast={showToast}
+                  search={search}
+                  scrollToTaskId={scrollTaskId}
+                  onScrolled={() => setScrollTaskId(null)}
+                />
+              )}
+              {page === 'history' && <HistoryPage search={search} />}
+              {page === 'important' && <ImportantTasksPage onToast={showToast} search={search} />}
+              {page === 'archive' && <ArchivePage onToast={showToast} search={search} />}
+            </motion.div>
+          </AnimatePresence>
         </div>
       </div>
 
@@ -163,6 +196,12 @@ export default function App() {
         }}
       />
       <Toast toast={toast} onClose={() => setToast(null)} />
+
+      <NotificationToastHost
+        toasts={toasts}
+        onDismiss={(id) => setToasts((ts) => ts.filter((t) => t.id !== id))}
+        onClick={navigateToTask}
+      />
     </div>
   );
 }

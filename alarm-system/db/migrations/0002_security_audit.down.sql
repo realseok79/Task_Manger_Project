@@ -1,0 +1,6 @@
+-- Migration 0002 (DOWN)
+BEGIN;
+DROP FUNCTION IF EXISTS purge_audit_log(INTEGER);
+DROP TABLE IF EXISTS audit_log;
+DROP TYPE IF EXISTS audit_result;
+COMMIT;

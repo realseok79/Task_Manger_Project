@@ -1,0 +1,59 @@
+.notif-toast-host {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: 1100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+.notif-toast {
+  --toast-accent: var(--color-warning, #d6a32a);
+  width: 320px;
+  max-width: calc(100vw - 32px);
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-left: 3px solid var(--toast-accent);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-float, 0 12px 32px rgba(0, 0, 0, 0.45));
+  pointer-events: auto;
+}
+.notif-toast--overdue_1day   { --toast-accent: #d6a32a; }
+.notif-toast--overdue_2day   { --toast-accent: #e1772e; }
+.notif-toast--delete_confirm { --toast-accent: var(--color-danger, #e24b4a); }
+
+.notif-toast__main {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--color-text-primary);
+}
+.notif-toast__icon { display: inline-flex; flex: 0 0 auto; margin-top: 1px; color: var(--toast-accent); }
+.notif-toast__message { font-size: var(--fs-sm); line-height: 1.4; color: var(--color-text-primary); word-break: break-word; }
+
+.notif-toast__close {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  display: inline-flex;
+  width: 22px; height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.notif-toast__close:hover { background: var(--color-card-muted); color: var(--color-text-primary); }

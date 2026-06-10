@@ -1,0 +1,4 @@
+@import '../../styles/modal.css';
+
+/* AddTaskModal 전용 미세 조정 */
+.add-task-modal .field-row .field { min-width: 0; }

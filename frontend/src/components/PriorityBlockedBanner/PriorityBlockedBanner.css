@@ -1,0 +1,42 @@
+/* 외곽: height 애니메이션을 위해 overflow 숨김 + radius. padding 은 __inner 가 가진다. */
+.priority-blocked-banner {
+  overflow: hidden;
+  border-radius: var(--radius-control); /* 8px */
+}
+
+.priority-blocked-banner__inner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);                  /* 8px */
+  padding: 10px 14px;
+  background: var(--color-background-danger); /* coral-900 #4a1b0c */
+  border: 1px solid var(--color-danger-border); /* coral-600 #993c1d */
+  border-radius: var(--radius-control);
+}
+
+.priority-blocked-banner__icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--color-danger-icon);      /* coral-200 */
+}
+
+.priority-blocked-banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.priority-blocked-banner__title {
+  font-size: 13px;
+  font-weight: var(--fw-medium);        /* 500 */
+  color: var(--color-danger-title);     /* coral-100 #ffd9cf */
+}
+
+.priority-blocked-banner__detail {
+  font-size: 12px;
+  color: var(--color-danger-detail);    /* coral-200 #e8a99c */
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .priority-blocked-banner { transition: none; }
+}

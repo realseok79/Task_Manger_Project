@@ -36,6 +36,9 @@ SPRING_PROFILES_ACTIVE=prod DB_URL=... DB_USERNAME=... DB_PASSWORD=... ./gradlew
 
 ### ⚙️ 환경 설정
 - **CORS 허용 origin**: `app.cors.allowed-origins` (기본값 `http://localhost:5173`). 운영에서는 환경변수 `APP_CORS_ALLOWED_ORIGINS`(콤마 구분 목록)로 override 합니다.
+- **가중치 갱신 스케줄러 주기**: `app.scheduler.weight-update-cron` (기본값 `0 0 0 * * ?` = 매일 자정). 환경변수 `APP_SCHEDULER_WEIGHT_UPDATE_CRON` 로 override 합니다.
+  - 예시 — 운영: `0 0 0 * * ?` / 스테이징: `0 */10 * * * ?` (10분마다) / 테스트: `-` (비활성화, `Scheduled.CRON_DISABLED`)
+  - 테스트 프로파일(`src/test/resources/application.yml`)은 `-` 로 고정되어 CI 중 자동 실행되지 않습니다.
 
 ### 📌 도메인 용어 정리 (브리프 ↔ 구현)
 - 브리프의 `status = ACTIVE`는 본 코드베이스의 **`PENDING`** 과 동일 의미입니다(미완료/조회 대상). 코드는 일관되게 `PENDING`을 사용합니다.

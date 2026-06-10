@@ -1,7 +1,9 @@
 import { memo, useState } from 'react';
-import { Check, AlertTriangle } from 'lucide-react';
+import { Check, AlertTriangle, Play, Pause } from 'lucide-react';
 import TagBadge from '../TagBadge/TagBadge';
 import TimerDisplay from '../TimerDisplay/TimerDisplay';
+import CountdownTimer from '../CountdownTimer/CountdownTimer';
+import TaskActionButtons from '../TaskActionButtons/TaskActionButtons';
 import { usePulse } from '../../hooks/useAnimations';
 import './TaskCard.css';
 
@@ -31,9 +33,25 @@ function TaskCard({
   onPauseTimer,
   onResumeTimer,
   onStopTimer,
+  // GOAL-3: 작업 진행 상태 제어 (IDLE/RUNNING/PAUSED). 제공되면 시작/중지/끝내기 버튼을 렌더.
+  runStatus,
+  displayTime,
+  onStart,
+  onPause,
+  onResume,
+  onFinish,
+  // 카운트다운 타이머(소요시간 기반). 제공되면 위 run 버튼 대신 CountdownTimer 를 렌더.
+  countdown,
+  // displayStatus 기반 제어 버튼(IDLE/ACTIVE/PAUSED/OVERDUE/COMPLETED). 제공되면 TaskActionButtons 렌더.
+  actions,
 }) {
   const hasTimer = Boolean(onPauseTimer || onResumeTimer || onStopTimer);
   const resolved = delayCount >= 5 ? 'zombie' : variant;
+  const hasControls = Boolean(runStatus) || Boolean(countdown) || Boolean(actions);
+  const stop = (fn) => (e) => {
+    e.stopPropagation();
+    fn?.();
+  };
   const truncated = title && title.length > 50 ? `${title.slice(0, 50)}…` : title;
 
   // --- History (completed) row: single line, tag + time pushed right -------
@@ -98,6 +116,12 @@ function TaskCard({
             {delayCount}번 미뤄짐
           </span>
         )}
+        {hasControls && (countdown || actions) && (
+          <div className="task-card__controls" onClick={(e) => e.stopPropagation()} role="presentation">
+            {countdown && <CountdownTimer {...countdown} hideControls={Boolean(actions)} />}
+            {actions && <TaskActionButtons {...actions} />}
+          </div>
+        )}
         <span className="task-card__line-meta">
           {scheduledTime && <span className="task-card__sub mono">{scheduledTime}</span>}
           {tags.map((t) => (
@@ -118,16 +142,18 @@ function TaskCard({
       onKeyDown={onClick ? (e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onClick()) : undefined}
     >
       <div className="task-card__body">
-        <button
-          type="button"
-          className={`task-card__check ${done ? 'is-checked' : ''}`}
-          role="checkbox"
-          aria-checked={done}
-          aria-label={`${title} 완료 처리`}
-          onClick={handleCheck}
-        >
-          {done && <Check size={14} strokeWidth={3} />}
-        </button>
+        {!hasControls && (
+          <button
+            type="button"
+            className={`task-card__check ${done ? 'is-checked' : ''}`}
+            role="checkbox"
+            aria-checked={done}
+            aria-label={`${title} 완료 처리`}
+            onClick={handleCheck}
+          >
+            {done && <Check size={14} strokeWidth={3} />}
+          </button>
+        )}
 
         <div className="task-card__content">
           <div className="task-card__titlerow">
@@ -173,7 +199,50 @@ function TaskCard({
           )}
         </div>
 
-        {hasTimer && (
+        {hasControls && (countdown || actions) && (
+          <div className="task-card__controls" onClick={(e) => e.stopPropagation()} role="presentation">
+            {countdown && <CountdownTimer {...countdown} hideControls={Boolean(actions)} />}
+            {actions && <TaskActionButtons {...actions} />}
+          </div>
+        )}
+
+        {hasControls && !countdown && !actions && (
+          <div className="task-card__controls">
+            {(runStatus === 'RUNNING' || runStatus === 'PAUSED') && displayTime && (
+              <TimerDisplay value={displayTime} isRunning={runStatus === 'RUNNING'} size="md" />
+            )}
+
+            {runStatus === 'IDLE' && (
+              <button type="button" className="run-btn run-btn--start" onClick={stop(onStart)}>
+                <Play size={14} aria-hidden="true" /> 시작
+              </button>
+            )}
+
+            {runStatus === 'RUNNING' && (
+              <>
+                <button type="button" className="run-btn" onClick={stop(onPause)}>
+                  <Pause size={14} aria-hidden="true" /> 중지
+                </button>
+                <button type="button" className="run-btn run-btn--finish" onClick={stop(onFinish)}>
+                  <Check size={14} aria-hidden="true" /> 끝내기
+                </button>
+              </>
+            )}
+
+            {runStatus === 'PAUSED' && (
+              <>
+                <button type="button" className="run-btn run-btn--start" onClick={stop(onResume)}>
+                  <Play size={14} aria-hidden="true" /> 재시작
+                </button>
+                <button type="button" className="run-btn run-btn--finish" onClick={stop(onFinish)}>
+                  <Check size={14} aria-hidden="true" /> 끝내기
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {!hasControls && hasTimer && (
           <TimerDisplay
             value={timerValue}
             isRunning={isTimerRunning}

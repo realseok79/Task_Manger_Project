@@ -5,7 +5,16 @@ import { Pool } from 'pg';
 import { Queue } from 'bullmq';
 import IORedis from 'ioredis';
 import { createAlarmRouter } from './routes/alarmRoutes';
+import { createNotificationRouter } from './routes/notificationRoutes';
 import { AlarmSocketHandler } from './realtime/socketHandler';
+import { NotificationDispatcher } from './realtime/notificationDispatcher';
+import { OverdueNotificationScheduler } from './queue/overdueNotificationScheduler';
+import { registerOverdueSchedule } from './queue/registerOverdueSchedule';
+import { NotificationBadgeCache } from './cache/notificationBadgeCache';
+import { createRateLimiter } from './middleware/rateLimit';
+import { createTaskTimeRouter } from './routes/taskTimeRoutes';
+import { createPriorityRouter } from './routes/priorityRoutes';
+import { PriorityTaskService } from './services/priorityTaskService';
 
 const app = express();
 const httpServer = createServer(app);
@@ -68,6 +77,25 @@ const socketHandler = new AlarmSocketHandler(io, dbPool, JWT_PUBLIC_KEY);
 // Mount Express API Routes
 const alarmRouter = createAlarmRouter(dbPool, socketHandler, JWT_PUBLIC_KEY);
 app.use('/api', alarmRouter);
+
+// Overdue(밀린 Task) 알림 시스템: 라우터 + 실시간 디스패처 + 배지 캐시 + 자정 00:05 스케줄러
+const badgeCache = redisConnection ? new NotificationBadgeCache(redisConnection) : undefined;
+// 조회 API 레이트리밋(초당 10건/유저). Redis 없으면 미적용(통과).
+const notifRateLimit = redisConnection ? createRateLimiter(redisConnection, { windowSec: 1, max: 10 }) : undefined;
+const notificationDispatcher = new NotificationDispatcher(io, dbPool, badgeCache);
+app.use('/api', createNotificationRouter(dbPool, notificationDispatcher, JWT_PUBLIC_KEY, badgeCache, notifRateLimit));
+
+// 소요시간/가용시간: POST /api/tasks, PATCH /api/tasks/:id/complete, GET·PUT /api/users/:id/available-time
+const priorityService = new PriorityTaskService(dbPool, redisConnection ?? undefined);
+app.use('/api', createTaskTimeRouter(dbPool, JWT_PUBLIC_KEY, 'Asia/Seoul', priorityService));
+app.use('/api', createPriorityRouter(dbPool, JWT_PUBLIC_KEY, redisConnection ?? undefined));
+if (redisConnection) {
+  const overdueScheduler = new OverdueNotificationScheduler(dbPool, notificationDispatcher);
+  registerOverdueSchedule(overdueScheduler, redisConnection);
+  console.log('[Overdue] Daily 00:05 notification scheduler + badge cache registered.');
+} else {
+  console.warn('[Overdue] Redis unavailable — daily scheduler & badge cache disabled.');
+}
 
 // Health check endpoint
 app.get('/health', (req, res) => {

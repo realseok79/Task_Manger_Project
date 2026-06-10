@@ -1,0 +1,72 @@
+@import '../../styles/modal.css';
+
+/* 409 가용시간 부족 경고 배너 */
+.tc-banner {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin: 0 var(--space-5);
+  padding: var(--space-3);
+  color: var(--color-danger, #e24b4a);
+  background: color-mix(in srgb, var(--color-danger, #e24b4a) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--color-danger, #e24b4a) 40%, transparent);
+  border-radius: var(--radius-md);
+}
+.tc-banner__body { display: flex; flex-direction: column; gap: 2px; }
+.tc-banner__body strong { font-size: var(--fs-sm); }
+.tc-banner__detail { font-size: var(--fs-xs); color: var(--color-text-secondary); }
+
+.tc-dday {
+  margin-left: var(--space-2);
+  padding: 1px 6px;
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-bold);
+  color: var(--tag-deadline-fg, #e24b4a);
+  border: 1px solid var(--tag-deadline-border, rgba(226, 75, 74, 0.4));
+  border-radius: var(--radius-sm);
+}
+
+/* 소요시간 시:분 입력 */
+.tc-duration {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.tc-duration.is-error { border-color: var(--color-danger, #e24b4a); }
+.tc-duration__num {
+  width: 56px;
+  padding: var(--space-2);
+  font-size: var(--fs-base);
+  font-family: inherit;
+  text-align: center;
+  color: var(--color-text-primary);
+  background: var(--color-card-muted);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  outline: none;
+}
+.tc-duration__num:focus { border-color: var(--color-primary); }
+.tc-duration__unit { font-size: var(--fs-sm); color: var(--color-text-secondary); }
+
+/* 최우선 과제 토글 + 차단 배너 */
+.tc-priority-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.tc-priority-block {
+  display: flex;
+  gap: var(--space-2);
+  align-items: flex-start;
+  margin-top: var(--space-2);
+  padding: var(--space-3);
+  color: #ffb4a2;
+  background: var(--color-background-danger, #4a1b0c);  /* 진한 빨강 계열 */
+  border: 1px solid color-mix(in srgb, var(--color-danger, #e24b4a) 50%, transparent);
+  border-radius: var(--radius-md);
+}
+.tc-priority-block svg { color: var(--color-danger, #e24b4a); flex-shrink: 0; margin-top: 1px; }
+.tc-priority-block__body { display: flex; flex-direction: column; gap: 2px; }
+.tc-priority-block__body strong { font-size: var(--fs-sm); color: #ffd9cf; }
+.tc-priority-block__body span { font-size: var(--fs-xs); color: #e8a99c; }
+.toggle:disabled { opacity: 0.45; cursor: not-allowed; }

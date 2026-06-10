@@ -6,7 +6,7 @@
  * live Spring Boot backend. The UI only ever consumes `toViewModel(...)` output
  * so the rest of the app is decoupled from the raw TaskResponse shape.
  */
-import client, { USE_MOCK } from './client';
+import client, { USE_MOCK, DEFAULT_USER_ID } from './client';
 import { mockApi } from './mock';
 
 const CATEGORY_TAGS = {
@@ -128,17 +128,22 @@ export async function recreateTask(task) {
   return data;
 }
 
-export async function getCompletedTasks(userId, filter) {
+export async function getCompletedTasks(userId = DEFAULT_USER_ID, filter) {
   if (USE_MOCK) return mockApi.getCompletedTasks(userId, filter);
-  // Live: logs lack titles, so map best-effort. (Backend limitation noted.)
-  const { data } = await client.get(`/api/logs/user/${userId}`, { params: { filter } });
-  return data
-    .filter((log) => log.actionType === 'COMPLETED')
-    .map((log) => ({
-      taskId: log.taskId,
-      title: `작업 #${log.taskId}`,
-      category: '업무',
-      completedAt: new Date(log.loggedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }),
-      date: log.loggedAt.slice(0, 10),
+  // 전용 엔드포인트가 실제 title·category·completedAt 을 제공한다(로그 기반의 제목 누락 문제 해소).
+  try {
+    const { data } = await client.get('/api/tasks/completed', { params: { userId } });
+    return data.map((t) => ({
+      taskId: t.taskId,
+      title: t.title,
+      category: t.category,
+      completedAt: t.completedAt
+        ? new Date(t.completedAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })
+        : '',
+      date: (t.completedAt ?? new Date().toISOString()).slice(0, 10),
     }));
+  } catch {
+    // 백엔드 미연결/엔드포인트 부재 시 빈 목록 — 로컬 완료 기록은 HistoryPage 가 병합한다.
+    return [];
+  }
 }
