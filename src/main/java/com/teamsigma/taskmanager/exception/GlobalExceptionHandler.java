@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.time.Clock;
+import java.util.Objects;
 
 /**
  * 전역 예외 처리기.
@@ -68,7 +69,7 @@ public class GlobalExceptionHandler {
 
     private ResponseEntity<ErrorResponse> build(HttpStatus status, String message) {
         // status.name() 으로 "BAD_REQUEST" 같은 enum 명칭을 그대로 error 필드에 채워 포맷을 통일.
-        return ResponseEntity.status(status)
+        return ResponseEntity.status(Objects.requireNonNull(status))
                 .body(ErrorResponse.of(status.value(), status.name(), message, clock));
     }
 }

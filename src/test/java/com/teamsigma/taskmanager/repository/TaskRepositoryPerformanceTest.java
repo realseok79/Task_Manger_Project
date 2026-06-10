@@ -67,7 +67,7 @@ class TaskRepositoryPerformanceTest {
         // 본 측정: 여러 번 실행해 평균을 낸다(단발 측정의 노이즈 완화)
         int runs = 10;
         long totalNanos = 0;
-        List<Task> result = null;
+        List<Task> result = List.of();
         for (int i = 0; i < runs; i++) {
             long start = System.nanoTime();
             result = taskRepository.findAvailableTasksWithHardConstraint(targetUserId, EnergyLevel.MEDIUM, 60);

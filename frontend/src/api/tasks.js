@@ -6,7 +6,7 @@
  * live Spring Boot backend. The UI only ever consumes `toViewModel(...)` output
  * so the rest of the app is decoupled from the raw TaskResponse shape.
  */
-import client, { USE_MOCK } from './client';
+import client, { USE_MOCK, DEFAULT_USER_ID } from './client';
 import { mockApi } from './mock';
 
 const CATEGORY_TAGS = {
@@ -62,7 +62,7 @@ export function toViewModel(t) {
 }
 
 // ---- CRUD --------------------------------------------------------------
-export async function getTasks(userId, energy, minutes) {
+export async function getTasks(userId = DEFAULT_USER_ID, energy, minutes) {
   if (USE_MOCK) return mockApi.getTasks(userId, energy, minutes);
   const { data } = await client.get('/api/tasks', { params: { userId, energy, minutes } });
   return data;
@@ -70,7 +70,7 @@ export async function getTasks(userId, energy, minutes) {
 
 /** Full PENDING list for the Today screen (mock convenience; live falls back
  *  to a wide getTasks call with max energy/time). */
-export async function getAllPending(userId) {
+export async function getAllPending(userId = DEFAULT_USER_ID) {
   if (USE_MOCK) return mockApi.getAllPending(userId);
   const { data } = await client.get('/api/tasks', {
     params: { userId, energy: 'HIGH', minutes: 100000 },
@@ -103,13 +103,13 @@ export const archiveTask = (taskId, energy, minutes) =>
 export const restoreTask = (taskId, energy, minutes) =>
   updateTaskStatus(taskId, 'RESTORE', energy, minutes);
 
-export async function getZombieTasks(userId) {
+export async function getZombieTasks(userId = DEFAULT_USER_ID) {
   if (USE_MOCK) return mockApi.getZombieTasks(userId);
   const { data } = await client.get('/api/tasks/zombie', { params: { userId } });
   return data;
 }
 
-export async function getArchivedTasks(userId) {
+export async function getArchivedTasks(userId = DEFAULT_USER_ID) {
   if (USE_MOCK) return mockApi.getArchivedTasks(userId);
   const { data } = await client.get('/api/tasks', { params: { userId, status: 'ARCHIVED' } });
   return data;
@@ -128,7 +128,7 @@ export async function recreateTask(task) {
   return data;
 }
 
-export async function getCompletedTasks(userId, filter) {
+export async function getCompletedTasks(userId = DEFAULT_USER_ID, filter) {
   if (USE_MOCK) return mockApi.getCompletedTasks(userId, filter);
   // Live: logs lack titles, so map best-effort. (Backend limitation noted.)
   const { data } = await client.get(`/api/logs/user/${userId}`, { params: { filter } });

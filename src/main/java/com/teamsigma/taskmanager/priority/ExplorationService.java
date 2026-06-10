@@ -21,8 +21,6 @@ public class ExplorationService {
 
     static final double EXPLORATION_PROBABILITY = 0.05;
     static final int LOOKBACK_DAYS = 30;
-    static final double BOOST_FACTOR = 1.5;
-    static final double MIN_BASE_SCORE = 1.0;
 
     private final UserActivityLogRepository userActivityLogRepository;
     private Random random = new Random();
@@ -48,7 +46,7 @@ public class ExplorationService {
         }
 
         // 바운드: 긴급(RED) 작업이 있으면 탐색으로 가리지 않는다("바쁜 날엔 우회 금지").
-        boolean hasUrgent = tasks.stream().anyMatch(t -> UrgencyEvaluator.RED.equals(t.getUrgencyLevel()));
+        boolean hasUrgent = tasks.stream().anyMatch(ScoredTaskResponse::isRed);
         if (hasUrgent) {
             log.info("Exploration skipped for user {}: urgent(RED) task present.", userId);
             clearFlags(tasks);
@@ -89,9 +87,6 @@ public class ExplorationService {
                     .orElse(null);
 
             if (pick != null) {
-                double maxScore = tasks.stream().mapToDouble(ScoredTaskResponse::getScore).max().orElse(0.0);
-                double tempScore = Math.round(Math.max(maxScore, MIN_BASE_SCORE) * BOOST_FACTOR * 100.0) / 100.0;
-                pick.setScore(tempScore);
                 pick.setExploration(true);
 
                 long completedInCategory = categoryCounts.getOrDefault(targetCategory, 0L);
@@ -99,10 +94,16 @@ public class ExplorationService {
                         "최근 %d일 완료가 가장 적은 '%s' 카테고리 (완료 %d건) — 탐색 추천",
                         LOOKBACK_DAYS, targetCategory, completedInCategory));
 
-                log.info("Selected task {} from category '{}' for exploration. Temporary score set to {}",
-                        pick.getTaskId(), targetCategory, tempScore);
+                // 1순위는 사용자의 진짜 최우선이 지키도록, 탐색 픽은 2순위로만 승격한다(점수는 위조하지 않음).
+                // 이미 1·2위면 그대로 둔다. 무작위로 최상단을 갈아치우던 동작을 제거 → "내 1순위"의 결정론 보장.
+                int idx = tasks.indexOf(pick);
+                if (idx > 1) {
+                    tasks.remove(idx);
+                    tasks.add(1, pick);
+                }
 
-                tasks.sort((t1, t2) -> Double.compare(t2.getScore(), t1.getScore()));
+                log.info("Selected task {} from category '{}' for exploration. Promoted to rank 2 (score unchanged).",
+                        pick.getTaskId(), targetCategory);
             }
         }
 

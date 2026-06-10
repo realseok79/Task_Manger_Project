@@ -33,9 +33,9 @@ class TaskRepositoryTest {
         @Test
         @DisplayName("정상 케이스: 에너지·시간 조건을 모두 충족하는 Task만 반환")
         void returnsOnlyAffordableTasks() {
-            Task affordable = saveTask("가벼운 일지 작성", 20, EnergyLevel.LOW, 3);
-            Task tooLong = saveTask("대규모 리팩토링", 120, EnergyLevel.LOW, 5);
-            Task tooHeavy = saveTask("복잡한 설계", 30, EnergyLevel.HIGH, 5);
+            saveTask("가벼운 일지 작성", 20, EnergyLevel.LOW, 3);
+            saveTask("대규모 리팩토링", 120, EnergyLevel.LOW, 5);
+            saveTask("복잡한 설계", 30, EnergyLevel.HIGH, 5);
             em.flush(); em.clear();
 
             List<Task> result = taskRepository.findAvailableTasksWithHardConstraint(user.getId(), EnergyLevel.LOW, 60);
@@ -50,8 +50,8 @@ class TaskRepositoryTest {
         @Test
         @DisplayName("정상 케이스: delayCount >= 5 이고 SNOOZED인 Task만 반환")
         void returnsZombieTasksOnly() {
-            Task zombie = saveTaskWithSnoozes(5);
-            Task normal = saveTask("일반 태스크", 30, EnergyLevel.LOW, 3);
+            saveTaskWithSnoozes(5);
+            saveTask("일반 태스크", 30, EnergyLevel.LOW, 3);
             em.flush(); em.clear();
 
             List<Task> result = taskRepository.findZombieTasksByUserId(user.getId());

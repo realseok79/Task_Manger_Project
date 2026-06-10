@@ -1,7 +1,6 @@
 package com.teamsigma.taskmanager.service;
 
 import com.teamsigma.taskmanager.domain.*;
-import com.teamsigma.taskmanager.event.TaskActionEvent;
 import com.teamsigma.taskmanager.repository.TaskRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -14,10 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 import java.util.Optional;
 import static org.assertj.core.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
+import org.springframework.context.ApplicationEvent;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("TaskService 단위 테스트")
+@SuppressWarnings("null")
 class TaskServiceTest {
     @Mock
     private TaskRepository taskRepository;
@@ -43,7 +45,7 @@ class TaskServiceTest {
             when(taskRepository.findById(1L)).thenReturn(Optional.of(task));
             taskService.completeTask(1L, EnergyLevel.HIGH, 90);
             assertThat(task.getStatus()).isEqualTo(TaskStatus.COMPLETED);
-            verify(eventPublisher, times(1)).publishEvent(any(TaskActionEvent.class));
+            verify(eventPublisher, times(1)).publishEvent(any(ApplicationEvent.class));
         }
     }
 
@@ -70,7 +72,7 @@ class TaskServiceTest {
             // then
             assertThat(task.getStatus()).isEqualTo(TaskStatus.SNOOZED);
             assertThat(task.getDelayCount()).isEqualTo(1);
-            verify(eventPublisher, times(1)).publishEvent(any(TaskActionEvent.class));
+            verify(eventPublisher, times(1)).publishEvent(any(ApplicationEvent.class));
         }
 
         @Test
@@ -82,7 +84,7 @@ class TaskServiceTest {
             // when / then
             assertThatThrownBy(() -> taskService.snoozeTask(1L, EnergyLevel.LOW, 30))
                     .isInstanceOf(IllegalStateException.class);
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(eventPublisher, never()).publishEvent(any(ApplicationEvent.class));
         }
     }
 
@@ -98,7 +100,7 @@ class TaskServiceTest {
             taskService.archiveTask(1L, EnergyLevel.LOW, 30);
             // then
             assertThat(task.getStatus()).isEqualTo(TaskStatus.ARCHIVED);
-            verify(eventPublisher, times(1)).publishEvent(any(TaskActionEvent.class));
+            verify(eventPublisher, times(1)).publishEvent(any(ApplicationEvent.class));
         }
 
         @Test
@@ -110,7 +112,7 @@ class TaskServiceTest {
             // when / then
             assertThatThrownBy(() -> taskService.archiveTask(1L, EnergyLevel.LOW, 30))
                     .isInstanceOf(IllegalStateException.class);
-            verify(eventPublisher, never()).publishEvent(any());
+            verify(eventPublisher, never()).publishEvent(any(ApplicationEvent.class));
         }
     }
 

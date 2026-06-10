@@ -68,6 +68,16 @@ class DefaultDynamicPriorityStrategyTest {
     }
 
     @Test
+    @DisplayName("마감 없는 묵은 일 - 연기가 쌓여도 패널티로 가라앉지 않고 aging으로 표면화된다")
+    void noDeadlineStaleSurfacesInsteadOfSinking() {
+        UserProfile profile = new UserProfile(1L, 0.5, 0.3, 0.2);
+        double fresh = strategy.calculate(task(3, null, 0), profile);   // 0.3 + 0
+        double stale = strategy.calculate(task(3, null, 4), profile);   // 0.3 + aging(4)*0.3, 패널티 없음
+        assertTrue(stale > fresh, "묵은 일(연기 4회)이 갓 만든 일보다 위로 와야 한다");
+        assertEquals(0.3 + (4.0 / 9.0) * 0.3, stale, 0.0001);
+    }
+
+    @Test
     @DisplayName("핵심 개선 - 긴급도가 중요도와 경쟁(임박 저중요 > 먼 고중요)")
     void urgencyCompetes() {
         UserProfile urgencyDriven = new UserProfile(1L, 0.2, 0.7, 0.1);

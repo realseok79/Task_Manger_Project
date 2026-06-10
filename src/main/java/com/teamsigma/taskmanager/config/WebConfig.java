@@ -1,5 +1,6 @@
 package com.teamsigma.taskmanager.config;
 
+import org.springframework.lang.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,6 +12,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 
 /**
  * CORS 설정.
@@ -33,10 +35,10 @@ public class WebConfig implements WebMvcConfigurer {
     private String[] allowedOrigins;
 
     @Override
-    public void addCorsMappings(CorsRegistry registry) {
+    public void addCorsMappings(@NonNull CorsRegistry registry) {
         registry.addMapping("/api/**")
-                .allowedOrigins(allowedOrigins)
-                .allowedMethods(ALLOWED_METHODS.toArray(String[]::new))
+                .allowedOrigins(Objects.requireNonNull(allowedOrigins))
+                .allowedMethods(Objects.requireNonNull(ALLOWED_METHODS.toArray(String[]::new)))
                 .allowedHeaders("*")
                 .allowCredentials(true)
                 .maxAge(MAX_AGE_SECONDS);

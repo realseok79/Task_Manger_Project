@@ -118,6 +118,10 @@ const latency = (ms = 280) => new Promise((r) => setTimeout(r, ms));
 const clone = (v) => JSON.parse(JSON.stringify(v));
 let nextId = 1000;
 
+// Priority weights, started "drifted" (as if the nightly learner boosted 중요도)
+// so the Settings → reset action visibly returns them to the 0.5/0.3/0.2 baseline.
+let WEIGHTS = { w1: 0.72, w2: 0.17, w3: 0.11 };
+
 // ---- Mock operations (same signatures the real api/tasks.js exposes) ------
 export const mockApi = {
   async getTasks(_userId, energy, minutes) {
@@ -214,5 +218,17 @@ export const mockApi = {
     await latency(160);
     if (!TASKS.some((t) => t.taskId === task.taskId)) TASKS = [...TASKS, task];
     return clone(task);
+  },
+
+  // ---- Priority weights ---------------------------------------------------
+  async getWeights(userId = 1) {
+    await latency(160);
+    return clone({ userId, ...WEIGHTS });
+  },
+
+  async resetWeights(userId = 1) {
+    await latency(200);
+    WEIGHTS = { w1: 0.5, w2: 0.3, w3: 0.2 };
+    return clone({ userId, ...WEIGHTS });
   },
 };

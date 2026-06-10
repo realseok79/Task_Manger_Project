@@ -1,7 +1,9 @@
 package com.teamsigma.taskmanager.controller;
 
 import com.teamsigma.taskmanager.dto.CompletionRateResponse;
+import com.teamsigma.taskmanager.dto.WeightResponse;
 import com.teamsigma.taskmanager.service.TaskService;
+import com.teamsigma.taskmanager.service.WeightService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -11,19 +13,21 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
  * 유저 단위 집계 API.
  */
-@Tag(name = "User API", description = "유저 단위 집계(완료율 등)")
+@Tag(name = "User API", description = "유저 단위 집계(완료율, 가중치 등)")
 @RestController
 @RequestMapping("/api/users")
 @RequiredArgsConstructor
 public class UserController {
 
     private final TaskService taskService;
+    private final WeightService weightService;
 
     // GET /api/users/{userId}/completion-rate — 완료율 조회
     @Operation(summary = "유저 완료율 조회",
@@ -36,5 +40,27 @@ public class UserController {
         // 서비스의 getCompletionRate()는 백분율(0~100)을 반환하므로 0.0~1.0 비율로 변환해 노출한다.
         double rate = taskService.getCompletionRate(userId) / 100.0;
         return new CompletionRateResponse(userId, rate);
+    }
+
+    // GET /api/users/{userId}/weights — 현재 가중치 조회
+    @Operation(summary = "유저 가중치 조회",
+            description = "유저의 현재 우선순위 가중치(중요도/긴급도/지연)를 반환한다.")
+    @ApiResponse(responseCode = "200", description = "조회 성공",
+            content = @Content(schema = @Schema(implementation = WeightResponse.class)))
+    @GetMapping("/{userId}/weights")
+    public WeightResponse getWeights(
+            @Parameter(description = "유저 ID", example = "1") @PathVariable Long userId) {
+        return WeightResponse.from(weightService.getWeights(userId));
+    }
+
+    // POST /api/users/{userId}/weights/reset — 가중치 기본값 리셋
+    @Operation(summary = "유저 가중치 리셋",
+            description = "학습으로 드리프트한 가중치를 기본값(0.5/0.3/0.2)으로 되돌린다(유저 override).")
+    @ApiResponse(responseCode = "200", description = "리셋 성공",
+            content = @Content(schema = @Schema(implementation = WeightResponse.class)))
+    @PostMapping("/{userId}/weights/reset")
+    public WeightResponse resetWeights(
+            @Parameter(description = "유저 ID", example = "1") @PathVariable Long userId) {
+        return WeightResponse.from(weightService.resetWeights(userId));
     }
 }

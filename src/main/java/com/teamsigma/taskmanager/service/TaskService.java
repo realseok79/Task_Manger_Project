@@ -18,6 +18,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null") // JPA 레거시 타입과 Eclipse null 분석기 불일치 — 런타임에는 안전
 public class TaskService {
     private final TaskRepository taskRepository;
     private final UserRepository userRepository;

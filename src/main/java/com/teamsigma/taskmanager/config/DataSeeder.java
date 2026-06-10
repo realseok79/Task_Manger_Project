@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
 @Profile("dev")
 @ConditionalOnProperty(name = "app.seed.enabled", havingValue = "true")
 @RequiredArgsConstructor
+@SuppressWarnings("null") // JPA save()가 레거시 타입을 반환해 Eclipse null 분석기와 불일치 — 런타임에는 안전
 public class DataSeeder implements ApplicationRunner {
 
     private final UserRepository userRepository;
@@ -49,11 +50,38 @@ public class DataSeeder implements ApplicationRunner {
         User balancedUser = userRepository.save(User.builder()
                 .email("balanced@sigma.com").nickname("균형러").build());   // userId = 2
 
-        seedPickyUser(pickyUser);
-        seedBalancedUser(balancedUser);
+        seedSimpleDemo(pickyUser);
 
         log.info("[DataSeeder] 시딩 완료 — Task {}건, ActivityLog {}건",
                 taskRepository.count(), activityLogRepository.count());
+    }
+
+    private void seedSimpleDemo(User user) {
+        // 대기 중인 작업들
+        saveTask(user, "기말 보고서 작성", 60, EnergyLevel.HIGH, 5);
+        saveTask(user, "블로그 글 작성", 30, EnergyLevel.LOW, 3);
+        
+        // 4번 미뤄진 작업 (한 번 더 미루면 5번 채워서 좀비 모달 발동!)
+        Task almostZombie = saveTask(user, "방 정리 및 청소", 45, EnergyLevel.LOW, 2);
+        almostZombie.snooze();
+        almostZombie.snooze();
+        almostZombie.snooze();
+        almostZombie.snooze(); // delayCount = 4, status = SNOOZED
+        taskRepository.save(almostZombie);
+        for (int i = 0; i < 4; i++) {
+            logAction(almostZombie, ActionType.SNOOZED, EnergyLevel.LOW, 30);
+        }
+
+        // 완료 기록용 작업들 (History 탭에서 확인 가능)
+        Task completed1 = saveTask(user, "이메일 답장 보내기", 15, EnergyLevel.LOW, 2);
+        completed1.complete();
+        taskRepository.save(completed1);
+        logAction(completed1, ActionType.COMPLETED, EnergyLevel.LOW, 20);
+
+        Task completed2 = saveTask(user, "팀 회의 참석", 45, EnergyLevel.MEDIUM, 4);
+        completed2.complete();
+        taskRepository.save(completed2);
+        logAction(completed2, ActionType.COMPLETED, EnergyLevel.MEDIUM, 60);
     }
 
     /**

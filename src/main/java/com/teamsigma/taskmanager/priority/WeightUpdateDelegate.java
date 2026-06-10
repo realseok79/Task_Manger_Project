@@ -26,7 +26,13 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@SuppressWarnings("null") // JPA findById(Long) 레거시 타입과 Eclipse null 분석기 불일치 — 런타임에는 안전
 public class WeightUpdateDelegate {
+
+    /** 가중치 자기보정 기준선(중요도 가중치 기본값). 부스트는 이 위로만 쌓이고, 정상일엔 여기로 회귀한다. */
+    static final double DEFAULT_W1 = UserProfile.DEFAULT_W1;
+    /** 정상 패턴 1회당 W1을 기준선 쪽으로 되돌리는 폭. */
+    static final double DECAY_STEP = 0.05;
 
     private final UserProfileRepository userProfileRepository;
 
@@ -75,6 +81,8 @@ public class WeightUpdateDelegate {
             adjustUserProfileWeights(userId, snoozedRate);
         } else {
             log.info("User {} has a normal activity pattern.", userId);
+            // 양방향 자기보정: 정상 패턴이면 과거 부스트로 높아진 W1을 기준선으로 한 스텝 되돌린다.
+            decayTowardBaseline(userId);
         }
 
         log.info("[WeightUpdate] COMMIT userId={}", userId);
@@ -120,5 +128,38 @@ public class WeightUpdateDelegate {
         log.info("Adjusted weights for user {}: W1={}(+{}%), W2={}, W3={}",
                 userId, String.format("%.4f", newW1), String.format("%.2f", boostRate * 100),
                 String.format("%.4f", newW2), String.format("%.4f", newW3));
+    }
+
+    /**
+     * 정상 패턴 유저의 W1을 기준선({@link #DEFAULT_W1})으로 한 스텝 되돌린다(자기보정).
+     * W1이 기준선 이하면 아무것도 하지 않으므로, 부스트된 적 없는 유저의 가중치는 그대로 유지된다.
+     * 줄인 만큼은 기존 W2:W3 비율대로 재분배해 합 1.0을 유지한다.
+     */
+    private void decayTowardBaseline(Long userId) {
+        userProfileRepository.findById(userId).ifPresent(profile -> {
+            double w1 = profile.getW1();
+            if (w1 <= DEFAULT_W1 + 1e-9) {
+                return; // 이미 기준선 이하 → 자기보정 불필요(부스트 흔적 없음)
+            }
+            double newW1 = Math.max(DEFAULT_W1, w1 - DECAY_STEP);
+            double w2 = profile.getW2();
+            double w3 = profile.getW3();
+            double remainingWeight = 1.0 - newW1;
+            double newW2;
+            double newW3;
+            if (w2 + w3 > 0.0) {
+                newW2 = remainingWeight * (w2 / (w2 + w3));
+                newW3 = remainingWeight * (w3 / (w2 + w3));
+            } else {
+                newW2 = remainingWeight / 2.0;
+                newW3 = remainingWeight / 2.0;
+            }
+            profile.updateWeights(newW1, newW2, newW3);
+            userProfileRepository.saveAndFlush(profile);
+
+            log.info("Decayed weights for user {} toward baseline: W1 {}→{}, W2={}, W3={}",
+                    userId, String.format("%.4f", w1), String.format("%.4f", newW1),
+                    String.format("%.4f", newW2), String.format("%.4f", newW3));
+        });
     }
 }

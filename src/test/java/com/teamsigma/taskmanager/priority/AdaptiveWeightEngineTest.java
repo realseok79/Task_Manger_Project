@@ -108,9 +108,33 @@ class AdaptiveWeightEngineTest {
         UserProfile updatedProfile = userProfileRepository.findById(userId).orElse(null);
         assertNotNull(updatedProfile);
 
-        // 정상 패턴이므로 가중치는 변함없이 유지되어야 함
+        // 정상 패턴이고 W1이 기준선(0.5) 이하이므로 가중치는 변함없이 유지되어야 함
         assertEquals(0.40, updatedProfile.getW1(), 0.0001);
         assertEquals(0.30, updatedProfile.getW2(), 0.0001);
         assertEquals(0.30, updatedProfile.getW3(), 0.0001);
+    }
+
+    @Test
+    @DisplayName("자기보정 케이스 - 정상 패턴이고 W1이 기준선(0.5)보다 높으면 W1을 한 스텝 기준선으로 되돌린다")
+    void learnAndAdjustWeights_DecayWhenNormalAndBoosted() {
+        // Given: 과거 부스트로 W1=0.70까지 오른 유저
+        Long userId = 3L;
+        UserProfile profile = new UserProfile(userId, 0.70, 0.15, 0.15);
+        userProfileRepository.save(profile);
+
+        LocalDateTime now = LocalDateTime.now();
+        // 정상 패턴(conditionA 미충족: 저난이도·저중요 완료율 1/2 = 50% ≤ 70%, 고중요 로그 없음)
+        activityLogRepository.save(new UserActivityLog(userId, "COMPLETED", 1, 20, now.minusHours(2)));
+        activityLogRepository.save(new UserActivityLog(userId, "SNOOZED", 2, 10, now.minusHours(4)));
+
+        // When
+        adaptiveWeightEngine.learnAndAdjustWeights();
+
+        // Then: 0.70 → 0.65, 남은 0.35를 기존 1:1 비율로 재분배 → 0.175 / 0.175
+        UserProfile updated = userProfileRepository.findById(userId).orElse(null);
+        assertNotNull(updated);
+        assertEquals(0.65, updated.getW1(), 0.0001);
+        assertEquals(0.175, updated.getW2(), 0.0001);
+        assertEquals(0.175, updated.getW3(), 0.0001);
     }
 }

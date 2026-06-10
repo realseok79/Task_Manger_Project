@@ -38,7 +38,11 @@ public class DefaultDynamicPriorityStrategy implements PriorityStrategy {
         double importanceNorm = clampUnit(task.getImportance() / MAX_IMPORTANCE);
         // 마감 있으면 시간 기반, 없으면 방치(aging) 기반 → 무마감 작업이 0으로 가라앉지 않음
         double urgencyNorm = urgencyEvaluator.factor(task);
-        double delayNorm = clampUnit(task.getDelayCount() / DELAY_PENALTY_CAP);
+        // 지연 패널티는 마감 있는 작업에만. 마감 없는 작업은 delayCount가 이미 긴급도(aging)로
+        // 양(+)으로 반영되므로, 패널티로 다시 빼면 이중 계상되어 묵은 일이 가라앉는다(UI '묵은 일 표면화'와 모순).
+        double delayNorm = task.getDeadline() != null
+                ? clampUnit(task.getDelayCount() / DELAY_PENALTY_CAP)
+                : 0.0;
 
         double importance = profile.getW1() * importanceNorm;
         double urgency = profile.getW2() * urgencyNorm;

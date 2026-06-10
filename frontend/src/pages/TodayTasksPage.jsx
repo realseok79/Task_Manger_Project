@@ -91,7 +91,7 @@ export default function TodayTasksPage({ composeRequest = null, onComposeHandled
   const minutes = timeAvailable * 60;
   const pending = useMemo(() => {
     const base = views
-      .filter((t) => !t.isPriority || t.isZombie)
+      .filter((t) => t.id !== priorityTask?.id)
       .filter((t) => !q || t.title.toLowerCase().includes(q))
       .map((t) => ({
         ...t,

@@ -25,6 +25,7 @@ import static org.springframework.boot.test.context.SpringBootTest.WebEnvironmen
  */
 @SpringBootTest(webEnvironment = RANDOM_PORT)
 @DisplayName("Task 생성 통합 테스트")
+@SuppressWarnings("null")
 class TaskCreateIntegrationTest {
 
     @Autowired private TestRestTemplate restTemplate;
@@ -52,8 +53,8 @@ class TaskCreateIntegrationTest {
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().category()).isEqualTo("업무");
+        TaskResponse body = response.getBody();
+        assertThat(body.category()).isEqualTo("업무");
         assertThat(response.getHeaders().getLocation()).isNotNull();
     }
 
@@ -69,7 +70,6 @@ class TaskCreateIntegrationTest {
 
         // then
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().category()).isEqualTo("DEFAULT");
     }
 
