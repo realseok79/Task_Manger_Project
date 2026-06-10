@@ -348,6 +348,5 @@ export const mockApi = {
     await latency(200);
     WEIGHTS = { w1: 0.5, w2: 0.3, w3: 0.2 };
     return clone({ userId, ...WEIGHTS });
->>>>>>> main
   },
 };

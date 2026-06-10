@@ -11,6 +11,7 @@ import HistoryPage from './pages/HistoryPage';
 import ImportantTasksPage from './pages/ImportantTasksPage';
 import ArchivePage from './pages/ArchivePage';
 import { useNotifications } from './hooks/useNotifications';
+import { useDaemonIpc } from './hooks/useDaemonIpc';
 import NotificationToastHost from './components/NotificationToast/NotificationToast';
 import AudioActivationSettings from './components/AudioActivationSettings/AudioActivationSettings';
 
@@ -81,6 +82,21 @@ export default function App() {
     clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(null), 5000);
   }, []);
+
+  // AudioDaemon IPC: a wake-word trigger surfaces here (primary tab only) and focuses the app.
+  const onTrigger = useCallback(
+    (payload) => {
+      setPage('today');
+      setDrawerOpen(false);
+      showToast(`🎙️ 호출어가 감지되었습니다: "${payload?.wake_phrase || '음성'}"`);
+      try { window.focus(); } catch { /* browsers restrict programmatic focus */ }
+    },
+    [showToast]
+  );
+  const onFocus = useCallback(() => {
+    try { window.focus(); } catch { /* noop */ }
+  }, []);
+  useDaemonIpc({ onTrigger, onFocus });
 
   const navigate = (id) => {
     setPage(id);

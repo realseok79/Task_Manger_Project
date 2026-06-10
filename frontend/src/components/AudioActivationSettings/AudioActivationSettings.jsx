@@ -3,7 +3,16 @@ import { AnimatePresence } from 'framer-motion';
 import VUMeter from './VUMeter';
 import WakeWordWizard from './WakeWordWizard';
 import ToastNotification from './ToastNotification';
-import { Settings, HelpCircle, AlertCircle, RefreshCw, Volume2, Sparkles } from 'lucide-react';
+import { RefreshCw, Sparkles } from 'lucide-react';
+import {
+    getDevices,
+    selectDevice as selectDeviceApi,
+    controlStream,
+    getStatus,
+    setAutostart as setAutostartApi,
+    AUDIO_DAEMON_WS,
+} from '../../api/audioDaemon';
+import { daemonIpc } from '../../api/daemonIpc';
 import './AudioActivationSettings.css';
 
 export default function AudioActivationSettings({ isOpen, onClose }) {
@@ -12,6 +21,11 @@ export default function AudioActivationSettings({ isOpen, onClose }) {
     const [devices, setDevices] = useState([{ id: 0, name: "내장 마이크", is_default: true }]);
     const [selectedDevice, setSelectedDevice] = useState(0);
     const [sensitivity, setSensitivity] = useState(50); // slider 0-100
+
+    // OS-service registration (Start at Login) — driven via the daemon's control API.
+    const [autostart, setAutostart] = useState(false);
+    const [daemonOnline, setDaemonOnline] = useState(false);
+    const [autostartBusy, setAutostartBusy] = useState(false);
 
     // Clap Trigger States
     const [clapEnabled, setClapEnabled] = useState(false);
@@ -30,28 +44,57 @@ export default function AudioActivationSettings({ isOpen, onClose }) {
     // Toast Alert Trigger
     const [showTriggerToast, setShowTriggerToast] = useState(false);
 
-    // Fetch devices from backend or use defaults
+    // On open: load real devices + current service status from the daemon.
+    // Falls back gracefully (mock device list, offline badge) when it's not running.
     useEffect(() => {
-        if (!isOpen) return;
-        
-        const fetchDevices = async () => {
+        if (!isOpen) return undefined;
+        let alive = true;
+
+        (async () => {
             try {
-                const res = await fetch("http://localhost:8080/devices");
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.length > 0) {
-                        setDevices(data);
-                        const defaultDev = data.find(d => d.is_default) || data[0];
-                        setSelectedDevice(defaultDev.id);
-                    }
+                const data = await getDevices();
+                if (alive && data.length > 0) {
+                    setDevices(data);
+                    const defaultDev = data.find((d) => d.is_default) || data[0];
+                    setSelectedDevice(defaultDev.id);
                 }
             } catch {
                 console.warn("Unable to connect to audio service backend. Using mock device list.");
             }
-        };
 
-        fetchDevices();
+            try {
+                const status = await getStatus();
+                if (alive) {
+                    setDaemonOnline(true);
+                    setAutostart(Boolean(status.autostart));
+                }
+            } catch {
+                if (alive) setDaemonOnline(false);
+            }
+        })();
+
+        return () => {
+            alive = false;
+        };
     }, [isOpen]);
+
+    // Toggle OS-level auto-start at login (register/unregister LaunchAgent/unit/task).
+    const handleToggleAutostart = async () => {
+        if (autostartBusy) return;
+        const next = !autostart;
+        setAutostartBusy(true);
+        setAutostart(next); // optimistic
+        try {
+            const res = await setAutostartApi(next);
+            setAutostart(Boolean(res.autostart));
+            setDaemonOnline(true);
+        } catch {
+            setAutostart(!next); // revert
+            setDaemonOnline(false);
+        } finally {
+            setAutostartBusy(false);
+        }
+    };
 
     // Handle Factory Reset
     const handleReset = () => {
@@ -70,20 +113,17 @@ export default function AudioActivationSettings({ isOpen, onClose }) {
     // Handle Settings Save
     const handleSave = async () => {
         try {
-            const res = await fetch("http://localhost:8080/devices/select", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ device_id: selectedDevice })
-            });
-            if (res.ok) {
-                // If stream is active, tell the server to restart or update
-                await fetch(`http://localhost:8080/control/stream?action=${isEnabled ? 'start' : 'stop'}`, {
-                    method: "POST"
-                });
-            }
+            await selectDeviceApi(selectedDevice);
+            await controlStream(isEnabled ? 'start' : 'stop');
         } catch {
             console.warn("Audio service backend offline. Saved local settings state.");
         }
+        // Notify the daemon over IPC that settings changed (CONFIG_UPDATED).
+        daemonIpc.sendConfigUpdated({
+            changed_keys: ['audio.device_id', 'audio.enabled', 'wake_word.phrase'],
+            reload_required: voiceEnabled ? ['wake_word_model'] : [],
+            restart_required: false,
+        });
         onClose();
     };
 
@@ -143,6 +183,26 @@ export default function AudioActivationSettings({ isOpen, onClose }) {
                                 aria-checked={isEnabled}
                                 className={`switch ${isEnabled ? 'is-on' : ''}`}
                                 onClick={() => setIsEnabled(!isEnabled)}
+                            />
+                        </div>
+
+                        <div className="settings-control-row">
+                            <div>
+                                <label className="settings-lbl" htmlFor="enable-autostart">로그인 시 자동 시작</label>
+                                <span className="settings-hint">
+                                    {daemonOnline
+                                        ? '컴퓨터 로그인 시 음성 인식 서비스가 자동으로 실행됩니다.'
+                                        : '오디오 서비스(데몬)가 실행 중이 아닙니다 — 데몬을 먼저 실행하세요.'}
+                                </span>
+                            </div>
+                            <button
+                                id="enable-autostart"
+                                type="button"
+                                role="switch"
+                                aria-checked={autostart}
+                                disabled={!daemonOnline || autostartBusy}
+                                className={`switch ${autostart ? 'is-on' : ''}`}
+                                onClick={handleToggleAutostart}
                             />
                         </div>
 
@@ -302,7 +362,7 @@ export default function AudioActivationSettings({ isOpen, onClose }) {
                     {isEnabled && (
                         <fieldset className="settings-section">
                             <legend className="settings-section__title">마이크 입력 레벨</legend>
-                            <VUMeter />
+                            <VUMeter wsUrl={AUDIO_DAEMON_WS} />
                         </fieldset>
                     )}
                 </div>

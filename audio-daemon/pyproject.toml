@@ -1,0 +1,28 @@
+[project]
+name = "teamsigma-audio-daemon"
+version = "0.1.0"
+description = "TeamSigma AudioDaemon — persistent local audio service + cross-platform OS service registration"
+requires-python = ">=3.9"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "sounddevice>=0.4.6",
+    "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.0", "httpx>=0.27", "pyinstaller>=6.0"]
+
+[project.scripts]
+teamsigma-audiodaemon = "audio_daemon.__main__:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

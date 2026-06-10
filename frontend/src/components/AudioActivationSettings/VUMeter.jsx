@@ -7,7 +7,7 @@ import './VUMeter.css';
  * - Graceful fallback to procedural audio level simulation when backend is offline.
  * - Color codes: Green (< -20dBFS), Yellow (-20 to -6dBFS), Red (> -6dBFS).
  */
-export default function VUMeter({ wsUrl = "ws://localhost:8080/stream/level" }) {
+export default function VUMeter({ wsUrl = "ws://localhost:8770/stream/level" }) {
     const [dbfs, setDbfs] = useState(-60);
     const [status, setStatus] = useState("disconnected");
     const wsRef = useRef(null);
