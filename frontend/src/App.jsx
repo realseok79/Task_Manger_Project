@@ -12,6 +12,7 @@ import ImportantTasksPage from './pages/ImportantTasksPage';
 import ArchivePage from './pages/ArchivePage';
 import { useNotifications } from './hooks/useNotifications';
 import NotificationToastHost from './components/NotificationToast/NotificationToast';
+import AudioActivationSettings from './components/AudioActivationSettings/AudioActivationSettings';
 
 /**
  * App shell — sidebar + topbar + routed page area, plus app-level chrome
@@ -32,6 +33,7 @@ export default function App() {
 
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const [search, setSearch] = useState('');
@@ -101,6 +103,11 @@ export default function App() {
         setPaletteOpen(true);
         return;
       }
+      if (mod && e.key === ',') {
+        e.preventDefault();
+        setAudioSettingsOpen(true);
+        return;
+      }
       const el = e.target;
       const typing =
         el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
@@ -148,6 +155,7 @@ export default function App() {
           onSearch={setSearch}
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}
+          onOpenAudioSettings={() => setAudioSettingsOpen(true)}
         />
         <div className="page-content">
           <AnimatePresence mode="wait">
@@ -185,6 +193,10 @@ export default function App() {
         onToggleNotifications={() => setNotificationsEnabled((v) => !v)}
       />
       <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
+      <AudioActivationSettings
+        isOpen={audioSettingsOpen}
+        onClose={() => setAudioSettingsOpen(false)}
+      />
       <CommandPalette
         isOpen={paletteOpen}
         onClose={() => setPaletteOpen(false)}

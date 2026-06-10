@@ -1,0 +1,473 @@
+.wizard-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.wizard-card {
+    background: var(--color-card);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 460px;
+    padding: var(--space-4);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    min-height: 480px;
+}
+
+[data-theme="light"] .wizard-card {
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+}
+
+.wizard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-2);
+}
+
+.wiz-back-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.wiz-back-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-primary);
+}
+
+[data-theme="light"] .wiz-back-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.wizard-step-indicator {
+    font-size: var(--fs-xs);
+    font-family: var(--font-mono);
+    color: var(--color-text-disabled);
+}
+
+.wizard-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.wiz-step {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    flex: 1;
+}
+
+.wiz-step--center {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.wiz-step-title {
+    font-size: var(--fs-lg);
+    font-weight: var(--fw-bold);
+    color: var(--color-text-primary);
+    margin: 0;
+}
+
+.wiz-step-desc {
+    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Introduction Input styles */
+.wiz-field {
+    width: 100%;
+}
+
+.wiz-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+    color: var(--color-text-primary);
+    font-size: var(--fs-base);
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+[data-theme="light"] .wiz-input {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.wiz-input:focus {
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.wiz-tips {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-3);
+}
+
+[data-theme="light"] .wiz-tips {
+    background: rgba(0, 0, 0, 0.01);
+}
+
+.wiz-tips__title {
+    font-size: var(--fs-xs);
+    font-weight: var(--fw-bold);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-2) 0;
+    text-transform: uppercase;
+}
+
+.wiz-tips__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    font-size: var(--fs-sm);
+}
+
+.wiz-tips__list li.pass {
+    color: var(--color-text-primary);
+}
+
+.wiz-tips__list li.fail {
+    color: #ef4444;
+}
+
+.wiz-tips__list li.info {
+    color: var(--color-text-disabled);
+}
+
+/* Mic Circle Pulsing (Step 2) */
+.wiz-mic-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-3);
+    margin: var(--space-2) 0;
+}
+
+.wiz-mic-circle {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.1);
+    border: 2px solid var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+    position: relative;
+}
+
+.wiz-mic-circle.is-active::after {
+    content: '';
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border-radius: 50%;
+    border: 2px solid var(--color-primary);
+    opacity: 0;
+    animation: mic-pulse 1.8s infinite ease-out;
+}
+
+@keyframes mic-pulse {
+    0% { transform: scale(1); opacity: 0.8; }
+    100% { transform: scale(1.3); opacity: 0; }
+}
+
+.wiz-waveform {
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-primary);
+}
+
+.wiz-waveform-bars {
+    animation: wave-pulse 1.2s infinite ease-in-out;
+}
+
+@keyframes wave-pulse {
+    0%, 100% { opacity: 0.4; transform: scaleY(0.9); }
+    50% { opacity: 1; transform: scaleY(1.2); }
+}
+
+.wiz-progress-dots {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-2);
+    margin: var(--space-2) 0;
+}
+
+.wiz-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="light"] .wiz-dot {
+    background: rgba(0, 0, 0, 0.15);
+}
+
+.wiz-dot.is-active {
+    background: var(--color-primary);
+    transform: scale(1.25);
+}
+
+.wiz-dot.is-done {
+    background: #10b981;
+}
+
+.wiz-progress-text {
+    margin-left: var(--space-2);
+    font-size: var(--fs-xs);
+    color: var(--color-text-secondary);
+}
+
+.wiz-feedback-banner {
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.quality-lbl {
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-sm);
+}
+
+.quality-lbl--good {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.quality-lbl--warn {
+    color: #f59e0b;
+    background: rgba(245, 158, 11, 0.1);
+}
+
+/* Training loader (Step 3) */
+.wiz-loader-box {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+    margin: var(--space-4) 0;
+}
+
+.wiz-progress-gauge {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+[data-theme="light"] .wiz-progress-gauge {
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.wiz-progress-fill {
+    height: 100%;
+    background: var(--color-primary);
+    transition: width 0.3s ease-out;
+}
+
+.wiz-loader-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: var(--fs-xs);
+    color: var(--color-text-disabled);
+}
+
+.wiz-fun-fact {
+    background: rgba(99, 102, 241, 0.05);
+    border-left: 3px solid var(--color-primary);
+    padding: var(--space-3);
+    border-radius: 0 var(--radius-md) var(--radius-md) 0;
+}
+
+.wiz-fun-fact__text {
+    margin: 0;
+    font-size: var(--fs-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+/* Validator state (Step 4) */
+.wiz-validator-state {
+    margin: var(--space-4) 0;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.val-circle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-bold);
+}
+
+.val-ring {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    border: 3px solid transparent;
+    border-top-color: var(--color-primary);
+    animation: val-spin 1.2s infinite linear;
+}
+
+.val-ring--fast {
+    border-top-color: #f59e0b;
+    animation: val-spin 0.6s infinite linear;
+}
+
+@keyframes val-spin {
+    100% { transform: rotate(360deg); }
+}
+
+.val-circle--listen { color: var(--color-primary); }
+.val-circle--detect { color: #f59e0b; }
+
+.val-circle--pass {
+    color: #10b981;
+}
+
+.val-circle--fail {
+    color: #ef4444;
+}
+
+.val-output-box {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.val-success-msg {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    color: #10b981;
+    font-weight: var(--fw-semibold);
+}
+
+.val-fail-msg {
+    color: #ef4444;
+    font-size: var(--fs-sm);
+}
+
+/* Buttons */
+.wiz-btn-primary, .wiz-btn-sec, .wiz-btn-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-1);
+    font-size: var(--fs-sm);
+    font-weight: var(--fw-semibold);
+    cursor: pointer;
+    border-radius: var(--radius-md);
+    transition: all 0.2s;
+    height: 44px; /* Apple HIG minimum touch target */
+    box-sizing: border-box;
+}
+
+.wiz-btn-primary {
+    background: var(--color-primary);
+    border: none;
+    color: #ffffff;
+    padding: 0 var(--space-4);
+    width: 100%;
+}
+
+.wiz-btn-primary:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+}
+
+.wiz-btn-primary:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.wiz-btn-sec {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-primary);
+    padding: 0 var(--space-4);
+    flex: 1;
+}
+
+[data-theme="light"] .wiz-btn-sec {
+    background: rgba(0, 0, 0, 0.02);
+}
+
+.wiz-btn-sec:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+[data-theme="light"] .wiz-btn-sec:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.wiz-btn-link {
+    background: transparent;
+    border: none;
+    color: var(--color-text-disabled);
+    text-decoration: underline;
+    padding: 0 var(--space-2);
+}
+
+.wiz-btn-link:hover {
+    color: var(--color-text-secondary);
+}
+
+.wiz-actions-row {
+    display: flex;
+    width: 100%;
+    gap: var(--space-3);
+    margin-top: auto;
+}

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Search, Moon, Sun, Bell, User, Menu, AlertTriangle, Clock, Settings, HelpCircle } from 'lucide-react';
+import { Search, Moon, Sun, Bell, User, Menu, AlertTriangle, Clock, Settings, HelpCircle, Mic } from 'lucide-react';
 import NotificationBell from '../NotificationBell/NotificationBell';
 import './TopBar.css';
 
@@ -13,6 +13,7 @@ export default function TopBar({
   onMenu,
   onOpenSettings,
   onOpenHelp,
+  onOpenAudioSettings,
   notification,
 }) {
   const [openMenu, setOpenMenu] = useState(null); // 'notif' | 'profile' | null
@@ -51,6 +52,15 @@ export default function TopBar({
       </div>
 
       <div className="topbar__actions" ref={ref}>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={onOpenAudioSettings}
+          aria-label="Audio Activation Settings"
+        >
+          <Mic size={20} />
+        </button>
+
         <button
           type="button"
           className="icon-btn"
