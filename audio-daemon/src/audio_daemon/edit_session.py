@@ -11,6 +11,7 @@ shadow and never touches the ACTIVE model.
 from __future__ import annotations
 
 import threading
+import time
 from enum import Enum
 from typing import Callable, List, Optional
 
@@ -37,12 +38,16 @@ class EditSession:
         frame_size: int,
         required_reps: int = 5,
         on_state_change: Optional[Callable[[EditState], None]] = None,
+        model_path: Optional[str] = None,
+        on_committed: Optional[Callable[[dict], None]] = None,
     ):
         self._bc = broadcaster
         self._detector = detector
         self._frame_size = frame_size
         self._required = required_reps
         self._on_state_change = on_state_change
+        self._model_path = model_path          # where to persist the trained model
+        self._on_committed = on_committed       # called after commit to update settings
 
         self.state = EditState.IDLE
         self._lock = threading.RLock()
@@ -117,16 +122,35 @@ class EditSession:
         return float(shadow.infer(frame)) if shadow is not None else 0.0
 
     def save(self) -> bool:
+        meta = None
         with self._lock:
             if self._shadow is None:
                 return False
             self._set(EditState.COMMITTING)
-            self._detector.hot_swap_model(self._shadow)  # atomic; detection continues with new model
+            # Persist the trained model to disk BEFORE swap (shadow stays referenced),
+            # so it can be reloaded on restart.
+            if self._model_path and hasattr(self._shadow, "save"):
+                try:
+                    self._shadow.save(self._model_path)
+                except Exception:  # noqa: BLE001
+                    pass
+            meta = {
+                "phrase": self._phrase,
+                "model_path": self._model_path,
+                "enrolled_samples_count": len(self._recordings),
+                "last_trained_at": int(time.time() * 1000),
+            }
+            self._detector.hot_swap_model(self._shadow)  # atomic; detection continues
             self._shadow = None
             self._unsubscribe_enrollment()
             self._recordings = []
             self._set(EditState.IDLE)
-            return True
+        if self._on_committed and meta is not None:
+            try:
+                self._on_committed(meta)  # update + persist settings (outside the lock)
+            except Exception:  # noqa: BLE001
+                pass
+        return True
 
     def cancel(self) -> None:
         with self._lock:

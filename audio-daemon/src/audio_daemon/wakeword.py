@@ -8,6 +8,16 @@ import numpy as np
 from .model_slot import ModelSlot, NullWakeWordModel, TemplateWakeWordModel, WakeWordModel
 
 
+def load_model(path: str) -> WakeWordModel:
+    """Load a persisted wake-word model (numpy .npz). Returns NullWakeWordModel on
+    any failure so a missing/corrupt model never crashes detection."""
+    try:
+        data = np.load(path, allow_pickle=False)
+        return TemplateWakeWordModel(data["template"], str(data["phrase"]))
+    except Exception:  # noqa: BLE001
+        return NullWakeWordModel()
+
+
 def energy_envelope(samples: np.ndarray, frame_size: int) -> np.ndarray:
     """Short-time RMS envelope of one recording (one value per frame_size block)."""
     samples = np.asarray(samples, dtype=np.float64).reshape(-1)
@@ -46,8 +56,14 @@ class WakeWordDetector:
         self._slot = model_slot or ModelSlot(NullWakeWordModel())
         self.threshold = threshold
         self._on_trigger = on_trigger
+        self._enabled = True
+
+    def set_enabled(self, enabled: bool) -> None:
+        self._enabled = enabled  # hot toggle; no model reload
 
     def process_frame(self, frame: np.ndarray) -> Optional[dict]:
+        if not self._enabled:
+            return None
         model = self._slot.get()  # always the current model — fast read
         if model is None:
             return None

@@ -202,3 +202,6 @@ class IpcHub:
 
     async def push_status(self, status: dict) -> None:
         await self._broadcast(DAEMON_STATUS, status)
+
+    async def broadcast_config_updated(self, changed_keys) -> None:
+        await self._broadcast(CONFIG_UPDATED, {"changed_keys": list(changed_keys), "ts": now_ms()})

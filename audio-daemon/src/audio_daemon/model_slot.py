@@ -54,6 +54,10 @@ class TemplateWakeWordModel(WakeWordModel):
             return 0.0
         return float(np.dot(v, self._template) / (vnorm * self._tnorm))  # cosine similarity
 
+    def save(self, path: str) -> None:
+        """Persist the trained template so detection survives restarts."""
+        np.savez(path, template=self._template, phrase=np.array(self.phrase))
+
     def release(self) -> None:
         self._template = None
         self._tnorm = 0.0

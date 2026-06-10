@@ -17,11 +17,21 @@ import numpy as np
 
 @dataclass
 class ClapConfig:
+    enabled: bool = True
     threshold_dbfs: float = -18.0   # absolute level a clap peak must exceed
     sensitivity: float = 0.5        # 0..1 → lower required onset ratio as it rises
     require_double: bool = True
     double_window_ms: float = 600.0
     refractory_ms: float = 150.0    # ignore retriggers within this window
+
+
+def clap_config_from_settings(clap_settings) -> "ClapConfig":
+    """Map the persisted ClapSettings (1–5 sensitivity) to the runtime ClapConfig."""
+    return ClapConfig(
+        enabled=clap_settings.enabled,
+        require_double=clap_settings.double_clap_required,
+        sensitivity=(clap_settings.sensitivity - 1) / 4.0,  # 1..5 → 0.0..1.0
+    )
 
 
 class ClapDetector:
@@ -45,6 +55,8 @@ class ClapDetector:
     def process_frame(self, frame: np.ndarray, now_ms: Optional[float] = None) -> Optional[dict]:
         with self._config_lock:
             cfg = self._config  # snapshot for this frame
+        if not cfg.enabled:
+            return None
         now = now_ms if now_ms is not None else time.time() * 1000.0
 
         rms = float(np.sqrt(np.mean(np.square(frame, dtype=np.float64)))) if frame.size else 0.0

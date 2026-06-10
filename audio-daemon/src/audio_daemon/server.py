@@ -28,6 +28,10 @@ from .edit_session import EditSession
 from .health import ServerHealthMonitor
 from .ipc import IpcHub
 from .service_manager import ServiceManager
+from .settings.orchestrator import ConfigReloadOrchestrator
+from .settings.schema import Settings
+from .settings.store import SettingsStore
+from .settings.watcher import SettingsWatcher
 from .wakeword import WakeWordDetector
 
 
@@ -61,7 +65,37 @@ def create_app(
     clap = ClapDetector(on_trigger=trigger_cb)
     wake = WakeWordDetector(threshold=config.WAKE_THRESHOLD, on_trigger=trigger_cb)
     detection_sub = DetectionSubscriber(clap, wake)
-    edit = EditSession(engine.broadcaster, wake, config.AUDIO_FRAME_SIZE, config.ENROLLMENT_REPS)
+
+    # Settings persistence (daemon owns/writes the file; browser is a client).
+    store = SettingsStore(config.settings_path())
+    store.load()
+
+    def broadcast_changes(keys) -> None:
+        loop = getattr(app.state, "loop", None)
+        if loop is not None:
+            asyncio.run_coroutine_threadsafe(ipc.broadcast_config_updated(keys), loop)
+
+    orchestrator = ConfigReloadOrchestrator(
+        clap, wake, engine.broadcaster, service=service, on_broadcast=broadcast_changes
+    )
+
+    def persist_wake(meta: dict) -> None:
+        # Enrollment committed → persist the new model + phrase so it reloads on restart.
+        cur = store.current()
+        ww = cur.wake_word.model_copy(update={
+            "enabled": True,
+            "phrase": meta.get("phrase") or cur.wake_word.phrase,
+            "model_path": meta.get("model_path"),
+            "enrolled_samples_count": meta.get("enrolled_samples_count", 0),
+            "last_trained_at": meta.get("last_trained_at"),
+        })
+        store.save(cur.model_copy(update={"wake_word": ww}))
+
+    edit = EditSession(
+        engine.broadcaster, wake, config.AUDIO_FRAME_SIZE, config.ENROLLMENT_REPS,
+        model_path=str(config.wakeword_model_path()), on_committed=persist_wake,
+    )
+    watcher = SettingsWatcher(store, on_external_change=orchestrator.apply_settings)
 
     app.state.engine = engine
     app.state.service = service
@@ -70,6 +104,8 @@ def create_app(
     app.state.clap = clap
     app.state.wake = wake
     app.state.edit = edit
+    app.state.store = store
+    app.state.orchestrator = orchestrator
     app.state.loop = None
     app.state.detection_token = None
 
@@ -77,10 +113,13 @@ def create_app(
     async def _on_startup():
         app.state.loop = asyncio.get_running_loop()
         app.state.detection_token = engine.broadcaster.subscribe(detection_sub)  # ACTIVE detector
+        orchestrator.apply_initial(store.current(), start_capture=config.START_CAPTURE_ON_BOOT)
+        watcher.start()
         health.start()
 
     @app.on_event("shutdown")
     async def _on_shutdown():
+        watcher.stop()
         if app.state.detection_token is not None:
             engine.broadcaster.unsubscribe(app.state.detection_token)
         await health.stop()
@@ -221,5 +260,22 @@ def create_app(
             refractory_ms=float(body.get("refractory_ms", current.refractory_ms)),
         ))
         return {"ok": True}
+
+    # --- Persisted settings (daemon owns the file; atomic write + targeted hot-reload) ---
+    @app.get("/settings")
+    def get_settings():
+        return store.current().model_dump()
+
+    @app.put("/settings")
+    async def put_settings(request: Request):
+        body = await request.json()
+        try:
+            new = Settings.model_validate(body)
+        except Exception as exc:  # ValidationError → 400
+            return JSONResponse({"ok": False, "error": str(exc)}, status_code=400)
+        old = store.current()
+        store.save(new)                                   # atomic, crash-safe
+        changed = orchestrator.apply_settings(old, new)   # targeted hot-reload + IPC notify
+        return {"ok": True, "changed": sorted(changed), "settings": new.model_dump()}
 
     return app

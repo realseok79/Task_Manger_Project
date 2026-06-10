@@ -32,6 +32,9 @@ AUDIO_SAMPLE_RATE = int(os.environ.get("AUDIO_DAEMON_SAMPLE_RATE", "16000"))
 AUDIO_FRAME_SIZE = int(os.environ.get("AUDIO_DAEMON_FRAME_SIZE", "512"))
 WAKE_THRESHOLD = float(os.environ.get("AUDIO_DAEMON_WAKE_THRESHOLD", "0.85"))
 ENROLLMENT_REPS = int(os.environ.get("AUDIO_DAEMON_ENROLLMENT_REPS", "5"))
+# Open the mic at boot to arm detection immediately. Off by default so the daemon
+# never grabs the mic (or raises a permission prompt) just by starting.
+START_CAPTURE_ON_BOOT = os.environ.get("AUDIO_DAEMON_START_CAPTURE", "false").lower() == "true"
 
 
 def base_url(port: int | None = None) -> str:
@@ -64,6 +67,14 @@ def log_dir() -> Path:
 
 def pidfile_path() -> Path:
     return state_dir() / "audio-daemon.pid"
+
+
+def settings_path() -> Path:
+    return state_dir() / "settings.json"
+
+
+def wakeword_model_path() -> Path:
+    return state_dir() / "wakeword_model.npz"
 
 
 def daemon_program_arguments() -> list[str]:
