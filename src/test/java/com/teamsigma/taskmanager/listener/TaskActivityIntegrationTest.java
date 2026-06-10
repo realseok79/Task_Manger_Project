@@ -29,6 +29,7 @@ import static org.awaitility.Awaitility.await;
  */
 @SpringBootTest
 @DisplayName("TaskActivityListener 비동기 적재 무결성 통합 테스트")
+@SuppressWarnings("null")
 class TaskActivityIntegrationTest {
 
     @Autowired private TaskService taskService;

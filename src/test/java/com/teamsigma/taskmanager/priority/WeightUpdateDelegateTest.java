@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 @DisplayName("WeightUpdateDelegate 단위 테스트")
+@SuppressWarnings("null")
 class WeightUpdateDelegateTest {
 
     @Mock

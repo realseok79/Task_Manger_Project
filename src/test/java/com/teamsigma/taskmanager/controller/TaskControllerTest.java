@@ -34,6 +34,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @WebMvcTest(TaskController.class)
 @Import(ClockConfig.class)   // GlobalExceptionHandler 가 Clock 빈을 요구하므로 제공
 @DisplayName("TaskController 단위 테스트(@WebMvcTest)")
+@SuppressWarnings("null") // Spring/Hamcrest 레거시 타입과 Eclipse null 분석기 불일치 — 런타임에는 안전
 class TaskControllerTest {
 
     @Autowired private MockMvc mockMvc;

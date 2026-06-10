@@ -25,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @Transactional   // 읽기 검증용 셋업 데이터는 테스트 후 자동 롤백 (AFTER_COMMIT 미관여 엔드포인트라 무방)
 @DisplayName("좀비 태스크 API 통합 테스트")
+@SuppressWarnings("null") // JPA save() 레거시 타입과 Eclipse null 분석기 불일치 — 런타임에는 안전
 class ZombieApiIntegrationTest {
 
     @Autowired private MockMvc mockMvc;

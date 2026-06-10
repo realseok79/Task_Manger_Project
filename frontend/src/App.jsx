@@ -98,7 +98,7 @@ export default function App() {
   useEffect(() => {
     const onKeyDown = (e) => {
       const mod = e.metaKey || e.ctrlKey;
-      if (mod && (e.key === 'k' || e.key === 'K')) {
+      if (mod && e.code === 'KeyK') {
         e.preventDefault();
         setPaletteOpen(true);
         return;
@@ -111,7 +111,7 @@ export default function App() {
       const el = e.target;
       const typing =
         el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable);
-      if (!mod && !typing && (e.key === 'n' || e.key === 'N')) {
+      if (!mod && !typing && e.code === 'KeyN') {
         e.preventDefault();
         requestCompose('');
       }
@@ -191,6 +191,7 @@ export default function App() {
         onThemeMode={setThemeMode}
         notificationsEnabled={notificationsEnabled}
         onToggleNotifications={() => setNotificationsEnabled((v) => !v)}
+        onToast={showToast}
       />
       <HelpModal isOpen={helpOpen} onClose={() => setHelpOpen(false)} />
       <AudioActivationSettings

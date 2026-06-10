@@ -7,12 +7,39 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
+@SuppressWarnings("null") // JPA findById(Long) 레거시 타입과 Eclipse null 분석기 불일치 — 런타임에는 안전
 public class PriorityService {
+
+    /**
+     * 우선순위 정렬 기준(긴급 하드가드).
+     * <ol>
+     *   <li>마감 임박(RED) 작업을 비-RED 위로 — 점수가 낮아도 절대 묻히지 않는다(신뢰·UI 일치).</li>
+     *   <li>같은 밴드 안에서는 점수 내림차순 — 학습된 중요도 우위를 그대로 유지.</li>
+     *   <li>점수 동점이면 더 임박 → 더 중요 → 더 빨리 끝남(퀵윈) → taskId 순으로 결정론적 정렬(동점 무작위 방지).</li>
+     * </ol>
+     * 점수 공식이 아니라 정렬 계층에 두므로, 야간 가중치 학습이 W1을 올려도 RED 보장은 무너지지 않는다.
+     */
+    static final Comparator<ScoredTaskResponse> BY_PRIORITY =
+            Comparator.comparing(ScoredTaskResponse::isRed).reversed()
+                    .thenComparing(Comparator.comparingDouble(ScoredTaskResponse::getScore).reversed())
+                    .thenComparing(Comparator.comparingDouble(PriorityService::urgencyTie).reversed())
+                    .thenComparing(Comparator.comparingDouble(PriorityService::importanceTie).reversed())
+                    .thenComparing(Comparator.comparingInt(ScoredTaskResponse::getEstimatedMinutes)) // 퀵윈: 짧은 것 먼저
+                    .thenComparing(ScoredTaskResponse::getTaskId, Comparator.nullsLast(Comparator.naturalOrder()));
+
+    private static double urgencyTie(ScoredTaskResponse r) {
+        return r.getUrgencyScore() == null ? 0.0 : r.getUrgencyScore();
+    }
+
+    private static double importanceTie(ScoredTaskResponse r) {
+        return r.getImportanceScore() == null ? 0.0 : r.getImportanceScore();
+    }
 
     private final PriorityStrategy priorityStrategy;
     private final UserProfileRepository userProfileRepository;
@@ -55,8 +82,8 @@ public class PriorityService {
                 })
                 .collect(Collectors.toList());
 
-        // 2. 기본 점수 내림차순 정렬
-        responses.sort((t1, t2) -> Double.compare(t2.getScore(), t1.getScore()));
+        // 2. 우선순위 정렬 — RED 하드가드 + 점수 내림차순 + 결정론 동점처리
+        responses.sort(BY_PRIORITY);
 
         // 3. 엔트로피 탐색 모드
         List<ScoredTaskResponse> ranked = explorationService.applyExplorationMode(userId, responses);

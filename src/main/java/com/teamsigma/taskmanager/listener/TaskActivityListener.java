@@ -15,6 +15,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @Slf4j
 @Component
 @RequiredArgsConstructor
+@SuppressWarnings("null") // JPA save()가 레거시 타입을 반환해 Eclipse null 분석기와 불일치 — 런타임에는 안전
 public class TaskActivityListener {
     private final UserActivityLogRepository activityLogRepository;
 

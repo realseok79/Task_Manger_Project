@@ -135,6 +135,10 @@ const estSecondsOf = (t) => t.estimatedDuration ?? (t.estimatedMinutes || 0) * 6
 const allocatedSeconds = () =>
   TASKS.filter((t) => t.status === 'PENDING').reduce((a, t) => a + estSecondsOf(t), 0);
 
+// Priority weights, started "drifted" (as if the nightly learner boosted 중요도)
+// so the Settings → reset action visibly returns them to the 0.5/0.3/0.2 baseline.
+let WEIGHTS = { w1: 0.72, w2: 0.17, w3: 0.11 };
+
 // ---- Mock operations (same signatures the real api/tasks.js exposes) ------
 export const mockApi = {
   async getTasks(_userId, energy, minutes) {
@@ -332,5 +336,18 @@ export const mockApi = {
     }
     AVAILABLE_SECONDS = seconds;
     return { available_seconds: seconds, allocated };
+  },
+
+  // ---- Priority weights ---------------------------------------------------
+  async getWeights(userId = 1) {
+    await latency(160);
+    return clone({ userId, ...WEIGHTS });
+  },
+
+  async resetWeights(userId = 1) {
+    await latency(200);
+    WEIGHTS = { w1: 0.5, w2: 0.3, w3: 0.2 };
+    return clone({ userId, ...WEIGHTS });
+>>>>>>> main
   },
 };
