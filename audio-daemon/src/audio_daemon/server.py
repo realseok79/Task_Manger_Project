@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from . import config, permissions
+from .activation import ActivationCoordinator
 from .audio import AudioEngine
 from .clap import ClapConfig, ClapDetector
 from .detection import DetectionSubscriber
@@ -62,8 +63,11 @@ def create_app(
         if loop is not None:
             asyncio.run_coroutine_threadsafe(ipc.emit_trigger(event), loop)
 
-    clap = ClapDetector(on_trigger=trigger_cb)
-    wake = WakeWordDetector(threshold=config.WAKE_THRESHOLD, on_trigger=trigger_cb)
+    # Activation gesture: double-clap arms a window, "Hey Sig" within it → one
+    # VOICE_ACTIVATION → emit_trigger (resurrection → app asks for today's tasks).
+    coordinator = ActivationCoordinator(on_activate=trigger_cb, clap_only=True)
+    clap = ClapDetector(on_trigger=coordinator.on_clap)
+    wake = WakeWordDetector(threshold=config.WAKE_THRESHOLD, on_trigger=coordinator.on_wake)
     detection_sub = DetectionSubscriber(clap, wake)
 
     # Settings persistence (daemon owns/writes the file; browser is a client).
@@ -103,6 +107,7 @@ def create_app(
     app.state.health = health
     app.state.clap = clap
     app.state.wake = wake
+    app.state.coordinator = coordinator
     app.state.edit = edit
     app.state.store = store
     app.state.orchestrator = orchestrator
@@ -162,6 +167,7 @@ def create_app(
             "last_heartbeat_ms": ipc.last_heartbeat_ms(),
             "backend_health": health.status(),
             "wake_threshold": wake.threshold,
+            "activation_armed": coordinator.is_armed(),
             "edit": edit.status(),
         }
 

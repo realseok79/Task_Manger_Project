@@ -86,7 +86,7 @@ class ClapDetector:
             "confidence": 1.0,
             "pattern": "single" if single else "double",
             "dbfs": round(dbfs, 1),
-            "action": "FOCUS_OR_LAUNCH",
+            "action": "ASK_TASKS",
         }
         if self._on_trigger:
             self._on_trigger(event)

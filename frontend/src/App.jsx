@@ -14,6 +14,7 @@ import { useNotifications } from './hooks/useNotifications';
 import { useDaemonIpc } from './hooks/useDaemonIpc';
 import NotificationToastHost from './components/NotificationToast/NotificationToast';
 import AudioActivationSettings from './components/AudioActivationSettings/AudioActivationSettings';
+import VoiceTaskCapture from './components/VoiceTaskCapture/VoiceTaskCapture';
 
 /**
  * App shell — sidebar + topbar + routed page area, plus app-level chrome
@@ -35,6 +36,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [audioSettingsOpen, setAudioSettingsOpen] = useState(false);
+  const [voiceOpen, setVoiceOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const toastTimer = useRef(null);
   const [search, setSearch] = useState('');
@@ -88,8 +90,18 @@ export default function App() {
     (payload) => {
       setPage('today');
       setDrawerOpen(false);
-      showToast(`🎙️ 호출어가 감지되었습니다: "${payload?.wake_phrase || '음성'}"`);
       try { window.focus(); } catch { /* browsers restrict programmatic focus */ }
+      // 👏👏 + "Hey Sig" → ask the user for today's tasks; otherwise just surface it.
+      if (
+        payload?.action === 'ASK_TASKS' ||
+        payload?.type === 'VOICE_ACTIVATION' ||
+        payload?.type === 'WAKE_WORD' ||
+        payload?.type === 'CLAP'
+      ) {
+        setVoiceOpen(true);
+      } else {
+        showToast(`🎙️ 호출어가 감지되었습니다: "${payload?.wake_phrase || '음성'}"`);
+      }
     },
     [showToast]
   );
@@ -213,6 +225,11 @@ export default function App() {
       <AudioActivationSettings
         isOpen={audioSettingsOpen}
         onClose={() => setAudioSettingsOpen(false)}
+      />
+      <VoiceTaskCapture
+        open={voiceOpen}
+        onClose={() => setVoiceOpen(false)}
+        onToast={showToast}
       />
       <CommandPalette
         isOpen={paletteOpen}

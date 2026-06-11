@@ -34,7 +34,7 @@ WAKE_THRESHOLD = float(os.environ.get("AUDIO_DAEMON_WAKE_THRESHOLD", "0.85"))
 ENROLLMENT_REPS = int(os.environ.get("AUDIO_DAEMON_ENROLLMENT_REPS", "5"))
 # Open the mic at boot to arm detection immediately. Off by default so the daemon
 # never grabs the mic (or raises a permission prompt) just by starting.
-START_CAPTURE_ON_BOOT = os.environ.get("AUDIO_DAEMON_START_CAPTURE", "false").lower() == "true"
+START_CAPTURE_ON_BOOT = os.environ.get("AUDIO_DAEMON_START_CAPTURE", "true").lower() == "true"
 
 
 def base_url(port: int | None = None) -> str:
