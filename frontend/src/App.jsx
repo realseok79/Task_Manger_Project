@@ -184,6 +184,7 @@ export default function App() {
           onOpenSettings={() => setSettingsOpen(true)}
           onOpenHelp={() => setHelpOpen(true)}
           onOpenAudioSettings={() => setAudioSettingsOpen(true)}
+          onTestClap={() => setVoiceOpen(true)}
         />
         <div className="page-content">
           <AnimatePresence mode="wait">

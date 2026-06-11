@@ -1,0 +1,32 @@
+# 공통 설정. 프로파일별(application-{dev,prod}.yml) 설정이 이 파일을 override 한다.
+spring:
+  application:
+    name: adaptive-task-manager
+  profiles:
+    # 기본값은 dev: 로컬에서 별도 옵션 없이 ./gradlew bootRun 만으로 H2+시더로 구동되도록 한다.
+    # 운영 배포 시에는 반드시 SPRING_PROFILES_ACTIVE=prod 로 덮어쓴다.
+    active: dev
+  jpa:
+    # OSIV(Open-Session-In-View) 비활성화: 뷰 렌더링까지 DB 커넥션을 잡고 있는 안티패턴을 막는다.
+    # (컨트롤러는 엔티티가 아닌 DTO만 반환하므로 LazyInitialization 위험 없음)
+    open-in-view: false
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html       # Swagger UI 진입 경로 (프론트/엔진 파트가 스펙 확인용으로 사용)
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs           # OpenAPI 원본 JSON 경로
+
+# 더미 시더 on/off 플래그. @Profile("dev") 와 이중으로 안전장치를 건다.
+app:
+  seed:
+    enabled: false               # 기본 false. dev 프로파일에서만 true 로 override.
+  cors:
+    # 프론트(Vite) 개발 서버 기본 origin. 운영에서는 환경변수 APP_CORS_ALLOWED_ORIGINS 로 override.
+    allowed-origins: http://localhost:5173
+  scheduler:
+    # 가중치 갱신 스케줄러 주기(cron). 기본: 매일 자정.
+    # 환경변수 APP_SCHEDULER_WEIGHT_UPDATE_CRON 로 override 가능하며, "-" 로 설정하면 비활성화된다.
+    #   운영: "0 0 0 * * ?" (매일 자정) / 스테이징: "0 */10 * * * ?" (10분마다) / 테스트: "-" (비활성화)
+    weight-update-cron: "0 0 0 * * ?"

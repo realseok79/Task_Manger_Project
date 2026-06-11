@@ -14,6 +14,7 @@ export default function TopBar({
   onOpenSettings,
   onOpenHelp,
   onOpenAudioSettings,
+  onTestClap,
   notification,
 }) {
   const [openMenu, setOpenMenu] = useState(null); // 'notif' | 'profile' | null
@@ -52,6 +53,18 @@ export default function TopBar({
       </div>
 
       <div className="topbar__actions" ref={ref}>
+        {onTestClap && (
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onTestClap}
+            title="테스트 박수 (마이크가 없는 환경용)"
+            aria-label="가상 박수 테스트"
+          >
+            👏
+          </button>
+        )}
+
         <button
           type="button"
           className="icon-btn"
