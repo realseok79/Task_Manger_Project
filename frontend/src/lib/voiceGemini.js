@@ -121,3 +121,63 @@ export async function parseWithGemini(text) {
 export function isGeminiAvailable() {
   return Boolean(GEMINI_API_KEY);
 }
+
+/**
+ * 오늘 해야 할 일과 밀린 일 목록을 기반으로 사용자에게 브리핑할 자연스러운 텍스트를 생성합니다.
+ * @param {Array} tasks - 오늘 할 일 목록 (pending)
+ * @param {Array} zombies - 지연된 일 목록 (zombies)
+ * @returns {Promise<string>} 브리핑 텍스트
+ */
+export async function generateBriefing(tasks = [], zombies = []) {
+  if (!isGeminiAvailable()) {
+    // 로컬 폴백
+    if (tasks.length === 0 && zombies.length === 0) {
+      return "오늘 예정된 작업이 없습니다. 어떤 작업을 하실 건가요?";
+    }
+    const parts = [];
+    if (tasks.length > 0) parts.push(`오늘 남은 작업이 ${tasks.length}개`);
+    if (zombies.length > 0) parts.push(`미뤄진 작업이 ${zombies.length}개`);
+    return `${parts.join(', ')} 있습니다. 어떤 작업을 추가할까요?`;
+  }
+
+  const prompt = `당신은 "시그마 태스크 매니저"의 AI 비서 자비스입니다.
+사용자에게 현재 작업 현황을 친절하고 자연스러운 한국어로 브리핑해주세요.
+
+[데이터]
+- 오늘 해야 할 일 (Pending): ${tasks.length}개
+${tasks.map(t => `  - [${t.title}] (중요도: ${t.importance}/5)`).join('\n')}
+- 오래 미뤄진 일 (Zombie): ${zombies.length}개
+${zombies.map(t => `  - [${t.title}] (중요도: ${t.importance}/5)`).join('\n')}
+
+[지시사항]
+1. 인삿말과 함께 시작하세요. (예: 안녕하세요!)
+2. 해야 할 일과 미뤄진 일의 개수를 언급하세요. (없으면 생략)
+3. 전체 목록 중 중요도가 높은 작업(5점 우선) 1~2개를 제목으로 언급하며 챙기라고 조언해주세요.
+4. 마지막은 반드시 "추가로 어떤 작업을 하실 건가요?" 또는 "새로 등록할 작업이 있나요?" 같은 질문으로 끝내서, 사용자가 자연스럽게 대답할 수 있게 유도하세요.
+5. 너무 길지 않게, 3~4문장 이내로 말하듯이 작성하세요.
+6. JSON이나 마크다운 특수문자(* 등)는 절대 쓰지 말고 순수 텍스트만 출력하세요.`;
+
+  try {
+    const resp = await fetch(`${GEMINI_URL}?key=${GEMINI_API_KEY}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 256,
+        },
+      }),
+    });
+
+    if (!resp.ok) throw new Error('API Error');
+    const data = await resp.json();
+    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (text) return text.trim().replace(/\*/g, '');
+  } catch (err) {
+    console.warn('[voiceGemini] briefing failed, fallback to local', err);
+  }
+
+  // 오류 시 폴백
+  return `오늘 남은 작업이 ${tasks.length}개, 미뤄진 작업이 ${zombies.length}개 있습니다. 추가로 어떤 작업을 등록할까요?`;
+}

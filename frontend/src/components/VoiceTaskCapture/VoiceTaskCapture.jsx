@@ -1,18 +1,22 @@
 import { useEffect, useRef, useState } from 'react';
 import Modal from '../Modal/Modal';
 import { createTaskWithBudget } from '../../api/availableTime';
+import { getAllPending, getZombieTasks } from '../../api/tasks';
 import { parseVoiceInput, parsedToSpeech } from '../../lib/voiceNlp';
-import { parseWithGemini, isGeminiAvailable } from '../../lib/voiceGemini';
+import { parseWithGemini, isGeminiAvailable, generateBriefing } from '../../lib/voiceGemini';
 import './VoiceTaskCapture.css';
 
 /**
  * VoiceTaskCapture — the "JARVIS" half of the wake-word flow.
  *
  * Opened when the daemon fires a VOICE_ACTIVATION (👏👏 clap-only or combo).
- * Uses Web Speech API: speaks prompt (TTS), listens (STT, ko-KR), then parses
- * the spoken text — first with Gemini AI (if available), falling back to the
- * rule-based NLP parser — to extract title, deadline, importance, category,
- * energy, and duration, then creates the task automatically.
+ * Uses Web Speech API:
+ * 1. Fetches current task status and generates a briefing (Gemini AI).
+ * 2. Speaks the briefing (TTS).
+ * 3. Listens for user input (STT, ko-KR).
+ * 4. Parses the spoken text (Gemini AI or rule-based fallback).
+ * 5. Extracts title, deadline, importance, category, energy, and duration.
+ * 6. Creates the task automatically.
  */
 const PROMPT = '오늘 어떤 작업을 하실 건가요?';
 const SpeechRecognitionCtor =
@@ -23,14 +27,18 @@ const VOICE_SUPPORTED =
 const IMPORTANCE_LABELS = { 5: '매우 높음', 4: '높음', 3: '보통', 2: '낮음', 1: '매우 낮음' };
 const ENERGY_LABELS = { HIGH: '높음', MEDIUM: '보통', LOW: '낮음' };
 
-function speak(text) {
+function speak(text, onEnd) {
   try {
     const utter = new SpeechSynthesisUtterance(text);
     utter.lang = 'ko-KR';
+    if (onEnd) {
+      utter.onend = onEnd;
+      utter.onerror = onEnd; // fallback if TTS fails to play
+    }
     window.speechSynthesis.cancel();
     window.speechSynthesis.speak(utter);
   } catch {
-    /* TTS is optional */
+    if (onEnd) onEnd();
   }
 }
 
@@ -48,8 +56,9 @@ function formatDeadline(iso) {
 }
 
 export default function VoiceTaskCapture({ open, onClose, onToast, onCreated }) {
-  // idle | asking | listening | parsing | parsed | creating | done | error | unsupported
+  // idle | preparing_briefing | briefing | listening | parsing | parsed | creating | done | error | unsupported
   const [phase, setPhase] = useState('idle');
+  const [briefingText, setBriefingText] = useState('');
   const [transcript, setTranscript] = useState('');
   const [manual, setManual] = useState('');
   const [parsedResult, setParsedResult] = useState(null);
@@ -118,7 +127,7 @@ export default function VoiceTaskCapture({ open, onClose, onToast, onCreated }) 
     smartParse(text);
   };
 
-  // Run the ask → listen conversation each time the modal opens.
+  // Run the briefing → ask → listen conversation each time the modal opens.
   useEffect(() => {
     if (!open) return undefined;
     cancelRef.current = false;
@@ -126,36 +135,61 @@ export default function VoiceTaskCapture({ open, onClose, onToast, onCreated }) 
     setManual('');
     setParsedResult(null);
     setAiSource(null);
+    setBriefingText('');
     if (!VOICE_SUPPORTED) {
       setPhase('unsupported');
       return undefined;
     }
+    
     let cancelled = false;
-    setPhase('asking');
-    speak(PROMPT);
 
-    const recog = new SpeechRecognitionCtor();
-    recog.lang = 'ko-KR';
-    recog.interimResults = false;
-    recog.maxAlternatives = 1;
-    recogRef.current = recog;
-    recog.onstart = () => !cancelled && setPhase('listening');
-    recog.onerror = () => !cancelled && setPhase('error');
-    recog.onresult = (e) => {
+    const startListening = () => {
       if (cancelled) return;
-      const text = e.results?.[0]?.[0]?.transcript?.trim();
-      if (text) handleVoiceResult(text);
-      else setPhase('error');
-    };
-    const timer = setTimeout(() => {
+      setPhase('listening');
+      const recog = new SpeechRecognitionCtor();
+      recog.lang = 'ko-KR';
+      recog.interimResults = false;
+      recog.maxAlternatives = 1;
+      recogRef.current = recog;
+      recog.onstart = () => !cancelled && setPhase('listening');
+      recog.onerror = () => !cancelled && setPhase('error');
+      recog.onresult = (e) => {
+        if (cancelled) return;
+        const text = e.results?.[0]?.[0]?.transcript?.trim();
+        if (text) handleVoiceResult(text);
+        else setPhase('error');
+      };
       try { recog.start(); } catch { setPhase('error'); }
-    }, 800);
+    };
+
+    const doBriefing = async () => {
+      setPhase('preparing_briefing');
+      try {
+        const [pending, zombies] = await Promise.all([
+          getAllPending(),
+          getZombieTasks()
+        ]);
+        if (cancelled) return;
+        
+        const text = await generateBriefing(pending, zombies);
+        if (cancelled) return;
+        
+        setBriefingText(text);
+        setPhase('briefing');
+        speak(text, startListening);
+      } catch (err) {
+        if (cancelled) return;
+        console.warn('[VoiceTaskCapture] Briefing failed', err);
+        speak(PROMPT, startListening);
+      }
+    };
+
+    doBriefing();
 
     return () => {
       cancelled = true;
       cancelRef.current = true;
-      clearTimeout(timer);
-      try { recog.abort(); } catch { /* noop */ }
+      try { recogRef.current?.abort(); } catch { /* noop */ }
       try { window.speechSynthesis.cancel(); } catch { /* noop */ }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -169,15 +203,31 @@ export default function VoiceTaskCapture({ open, onClose, onToast, onCreated }) 
   return (
     <Modal isOpen={open} onClose={onClose} title="🎙️ 음성으로 작업 추가" maxWidth={480}>
       <div className="voice-capture">
-        <p className="voice-capture__prompt">{PROMPT}</p>
+        
+        {phase === 'preparing_briefing' && (
+          <p className="voice-capture__status voice-capture__status--parsing">
+            <span className="voice-capture__spinner" />
+            작업 현황을 파악 중입니다…
+          </p>
+        )}
 
-        {phase === 'asking' && <p className="voice-capture__status">잠시만요…</p>}
+        {phase === 'briefing' && (
+          <div className="voice-capture__briefing">
+            <p className="voice-capture__briefing-text">{briefingText}</p>
+            <p className="voice-capture__status">
+              <span className="voice-capture__pulse" style={{ background: '#3b82f6' }} />
+              자비스가 브리핑 중입니다…
+            </p>
+          </div>
+        )}
+
         {phase === 'listening' && (
           <p className="voice-capture__status voice-capture__status--live">
             <span className="voice-capture__pulse" />
             듣고 있어요 — 작업을 말씀해 주세요
           </p>
         )}
+
         {phase === 'parsing' && (
           <p className="voice-capture__status voice-capture__status--parsing">
             <span className="voice-capture__spinner" />
