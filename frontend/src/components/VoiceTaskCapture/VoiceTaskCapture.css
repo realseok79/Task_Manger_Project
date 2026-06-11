@@ -1,0 +1,239 @@
+.voice-capture {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4, 16px);
+  padding: 4px 0;
+}
+
+.voice-capture__prompt {
+  font-size: var(--fs-lg, 18px);
+  font-weight: var(--fw-semibold, 600);
+  color: var(--color-text-primary, #111);
+}
+
+.voice-capture__status {
+  font-size: var(--fs-sm, 14px);
+  color: var(--color-text-secondary, #666);
+}
+
+.voice-capture__status--live {
+  color: #e5484d;
+  font-weight: var(--fw-medium, 500);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-capture__status--parsing {
+  color: #7c3aed;
+  font-weight: var(--fw-medium, 500);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.voice-capture__pulse {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e5484d;
+  animation: voice-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes voice-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.7); }
+}
+
+.voice-capture__spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #d8b4fe;
+  border-top-color: #7c3aed;
+  border-radius: 50%;
+  animation: voice-spin 0.7s linear infinite;
+}
+
+@keyframes voice-spin {
+  to { transform: rotate(360deg); }
+}
+
+.voice-capture__status--ok {
+  color: #30a46c;
+  font-weight: var(--fw-medium, 500);
+}
+
+.voice-capture__status--err {
+  color: #e5484d;
+}
+
+/* ── 원본 음성 텍스트 ── */
+.voice-capture__transcript {
+  font-size: var(--fs-sm, 14px);
+  color: var(--color-text-secondary, #888);
+  font-style: italic;
+  padding: 0;
+  margin: 0;
+}
+
+/* ── 파싱 결과 확인 카드 ── */
+.voice-capture__card {
+  background: var(--color-card-elevated, #f8f9fa);
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: var(--radius-lg, 12px);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  animation: card-slide-in 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes card-slide-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+[data-theme="dark"] .voice-capture__card {
+  background: var(--color-card-elevated, #1e1e2e);
+  border-color: var(--color-border, #333);
+}
+
+.voice-capture__card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.voice-capture__card-title {
+  font-size: var(--fs-lg, 18px);
+  font-weight: var(--fw-bold, 700);
+  color: var(--color-text-primary, #111);
+  flex: 1;
+  min-width: 0;
+}
+
+.voice-capture__ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+  color: #4a1d96;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .voice-capture__ai-badge {
+  background: linear-gradient(135deg, #3b1d6e 0%, #1a365d 100%);
+  color: #c4b5fd;
+}
+
+.voice-capture__card-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.voice-capture__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 12px;
+  font-weight: var(--fw-medium, 500);
+  padding: 4px 10px;
+  border-radius: 20px;
+  background: var(--color-bg-subtle, #f0f0f0);
+  color: var(--color-text-secondary, #555);
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .voice-capture__tag {
+  background: var(--color-bg-subtle, #2a2a3a);
+  color: var(--color-text-secondary, #bbb);
+}
+
+.voice-capture__tag--deadline {
+  background: #e8f4fd;
+  color: #0969da;
+}
+[data-theme="dark"] .voice-capture__tag--deadline {
+  background: #0d2847;
+  color: #58a6ff;
+}
+
+.voice-capture__tag--importance {
+  background: #fff4e6;
+  color: #d97706;
+}
+[data-theme="dark"] .voice-capture__tag--importance {
+  background: #3d2800;
+  color: #fbbf24;
+}
+
+.voice-capture__tag--category {
+  background: #f0fdf4;
+  color: #16a34a;
+}
+[data-theme="dark"] .voice-capture__tag--category {
+  background: #052e16;
+  color: #4ade80;
+}
+
+.voice-capture__tag--energy {
+  background: #fef2f2;
+  color: #dc2626;
+}
+[data-theme="dark"] .voice-capture__tag--energy {
+  background: #3b0a0a;
+  color: #f87171;
+}
+
+.voice-capture__tag--duration {
+  background: #f5f3ff;
+  color: #7c3aed;
+}
+[data-theme="dark"] .voice-capture__tag--duration {
+  background: #1e1040;
+  color: #a78bfa;
+}
+
+/* ── 자동 저장 프로그레스 바 ── */
+.voice-capture__card-actions {
+  margin-top: 4px;
+}
+
+.voice-capture__progress {
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, #7c3aed, #3b82f6, #30a46c);
+  background-size: 200% 100%;
+  animation: voice-progress 2s linear forwards;
+}
+
+@keyframes voice-progress {
+  from { width: 100%; }
+  to { width: 0%; }
+}
+
+/* ── 텍스트 폴백 입력 ── */
+.voice-capture__manual {
+  display: flex;
+  gap: 8px;
+}
+
+.voice-capture__input {
+  flex: 1;
+  padding: 9px 12px;
+  border: 1px solid var(--color-border, #d8d8d8);
+  border-radius: var(--radius-control, 8px);
+  font-size: var(--fs-sm, 14px);
+  background: var(--color-card, #fff);
+  color: var(--color-text-primary, #111);
+}
